@@ -1629,8 +1629,17 @@ async function _initApp() {
     MATRIZ_DESC_AF  = mdescAF.map(_mapMatrizDesc);
     MATRIZ_DESC_EM  = mdescEM.map(_mapMatrizDesc);
 
-    // Popular séries nos selects
+    // Popular séries nos selects (Escopo + AE + Habilidades + Matriz)
     populateSeries();
+    const _allSeries = [...DATA_AF.map(r => r.Ano), ...DATA_EM.map(r => r.Serie)].filter(Boolean);
+    const _seriesOpts = '<option value="">Selecione...</option>' +
+      sortSeries(_allSeries).map(s => `<option value="${s}">${s}</option>`).join('');
+    document.getElementById('ae-sel-serie').innerHTML  = _seriesOpts;
+    document.getElementById('hab-sel-serie').innerHTML = _seriesOpts;
+    document.getElementById('mtz-sel-serie').innerHTML = _seriesOpts;
+
+    // Popular tabela resumo na aba Para Começar
+    buildResumo();
 
     // Pré-selecionar 6° Ano / Matemática / 1° Bimestre
     const SERIE = '6º Ano', COMP = 'Matemática', BIM = '1º Bimestre';

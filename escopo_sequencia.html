@@ -295,6 +295,20 @@ header p { font-size: .78rem; color: #fff; font-weight: 600; margin-top: 2px; }
 .hab-chip-lg.nav { cursor: pointer; transition: all .15s; }
 .hab-chip-lg.nav:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
 
+/* AE list layout */
+.ae-list { display: flex; flex-direction: column; gap: 8px; }
+.ae-list-item { background: #fff; border-radius: 10px; box-shadow: var(--shadow); border-left: 4px solid var(--orange); overflow: hidden; }
+.ae-list-header { display: flex; align-items: center; gap: 12px; padding: 16px 20px; cursor: pointer; user-select: none; }
+.ae-list-header:hover { background: var(--blue-pale); }
+.ae-list-titulo { flex: 1; font-size: .92rem; font-weight: 500; line-height: 1.45; }
+.ae-list-chevron { font-size: .85rem; color: var(--text-muted); transition: transform .2s; flex-shrink: 0; }
+.ae-list-item.open .ae-list-chevron { transform: rotate(180deg); }
+.ae-list-body { display: none; padding: 16px 20px; border-top: 1px solid var(--gray-mid); flex-direction: column; gap: 14px; }
+.ae-list-item.open .ae-list-body { display: flex; }
+.ae-detail-label { font-size: .67rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 5px; }
+.ae-detail-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.ae-detail-empty { color: var(--text-muted); font-size: .85rem; }
+
 /* ── HABILIDADES ── */
 .hab-tab-wrap { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
 
@@ -754,6 +768,8 @@ header p { font-size: .78rem; color: #fff; font-weight: 600; margin-top: 2px; }
 <script>
 let DATA_AF = []
 let DATA_EM = []
+let AE_AF = []
+let AE_EM = []
 
 // Ordem de exibição das séries
 const SERIE_ORDER = ['6º Ano','7º Ano','8º Ano','9º Ano','1ª Série','2ª Série','3ª Série'];
@@ -1024,7 +1040,10 @@ function goToAE(serie, comp, aeCode) {
   aeOnFiltro();
   setTimeout(() => {
     const card = document.getElementById('ae-card-' + aeCode);
-    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (card) {
+      card.classList.add('open');
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }, 50);
 }
 
@@ -1200,82 +1219,103 @@ function goToAula(serie, comp, bim, aulaNum) {
 }
 
 function renderAE(serie, comp) {
-  const { data, key } = getCtx(serie);
-  const rows = data.filter(r => r[key] === serie && r.Componente === comp);
+  const isAF = DATA_AF.some(r => r.Ano === serie);
+  const aeRows = (isAF ? AE_AF : AE_EM).filter(r => r.serie === serie && r.componente === comp);
 
-  if (!rows.length) {
+  if (!aeRows.length) {
     document.getElementById('ae-content').innerHTML =
       '<div class="placeholder"><div class="icon">🔍</div><h2>Nenhum dado encontrado.</h2></div>';
     return;
   }
 
-  // Construir mapa: bimestre → aeCode → { desc, habilidades, aulas }
-  const bimMap = new Map();
-
-  for (const row of rows) {
-    const bim = row.Bimestre;
-    if (!bimMap.has(bim)) bimMap.set(bim, new Map());
-    const aeMap = bimMap.get(bim);
-
-    const aes = parseAEs(row.AE);
-    for (const ae of aes) {
-      if (!aeMap.has(ae.code)) {
-        aeMap.set(ae.code, { code: ae.code, desc: ae.desc, habilidades: new Set(), aulas: new Set() });
-      }
-      const entry = aeMap.get(ae.code);
-      if (row.Habilidades) entry.habilidades.add(row.Habilidades);
-      if (row.Aula) entry.aulas.add(Number(row.Aula));
+  // Coletar outras habilidades e aulas do escopo para cada AE
+  const { data, key } = getCtx(serie);
+  const escopoRows = data.filter(r => r[key] === serie && r.Componente === comp);
+  const escopoByAE = new Map();
+  for (const row of escopoRows) {
+    for (const ae of parseAEs(row.AE)) {
+      if (!escopoByAE.has(ae.code)) escopoByAE.set(ae.code, { habilidades: new Set(), aulas: new Set() });
+      if (row.Habilidades) escopoByAE.get(ae.code).habilidades.add(row.Habilidades);
+      if (row.Aula) escopoByAE.get(ae.code).aulas.add(Number(row.Aula));
     }
   }
 
-  // Ordenar bimestres
+  // Agrupar AE por bimestre
+  const bimMap = new Map();
+  for (const row of aeRows) {
+    const bim = row.bimestre || '';
+    if (!bimMap.has(bim)) bimMap.set(bim, []);
+    bimMap.get(bim).push(row);
+  }
+
   const bimestres = [...bimMap.keys()].sort((a, b) => {
+    if (!a) return 1; if (!b) return -1;
     const ia = BIM_ORDER.indexOf(a), ib = BIM_ORDER.indexOf(b);
     return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
   });
 
   let html = '';
   for (const bim of bimestres) {
-    const aeMap = bimMap.get(bim);
-    // Ordenar AEs por número
-    const aes = [...aeMap.values()].sort((a, b) => {
-      const na = parseInt(a.code.replace('AE','')), nb = parseInt(b.code.replace('AE',''));
-      return na - nb;
-    });
+    const aes = bimMap.get(bim).sort((a, b) =>
+      parseInt(a.ae.replace('AE','')) - parseInt(b.ae.replace('AE',''))
+    );
+    const bimLabel = bim || 'Sem bimestre definido';
 
     html += `
       <div class="ae-bim-block">
         <div class="ae-bim-header">
-          <span class="ae-bim-label">${bim}</span>
+          <span class="ae-bim-label">${bimLabel}</span>
           <div class="ae-bim-divider"></div>
-          <span class="ae-bim-meta">${aes.length} Aprendizagem${aes.length !== 1 ? 's' : ''} Essencial${aes.length !== 1 ? 'is' : ''}</span>
+          <span class="ae-bim-meta">${aes.length} AE${aes.length !== 1 ? 's' : ''}</span>
         </div>
-        <div class="ae-cards-grid">`;
+        <div class="ae-list">`;
 
     for (const ae of aes) {
-      const habsHtml = [...ae.habilidades].map(h =>
+      const esc = escopoByAE.get(ae.ae) || { habilidades: new Set(), aulas: new Set() };
+      const hp = ae.hab_priorizada || '';
+      const previos = ae.conhecimentos_previos ? ae.conhecimentos_previos.split(/\s+/).filter(Boolean) : [];
+      const outrasHabs = [...esc.habilidades].filter(h => h !== hp);
+      const aulas = [...esc.aulas].sort((a,b) => a-b);
+
+      const hpHtml = hp
+        ? `<span class="hab-chip-lg nav" title="Ver na aba Habilidades" onclick="goToHab('${serie}','${comp}','${hp}')">${hp}</span>`
+        : `<span class="ae-detail-empty">—</span>`;
+
+      const outrasHtml = outrasHabs.map(h =>
         `<span class="hab-chip-lg nav" title="Ver na aba Habilidades" onclick="goToHab('${serie}','${comp}','${h}')">${h}</span>`
       ).join('');
-      const aulasOrdenadas = [...ae.aulas].sort((a,b) => a-b);
-      const aulasHtml = aulasOrdenadas.map(n =>
+
+      const previosHtml = previos.map(h =>
+        `<span class="hab-chip-lg">${h}</span>`
+      ).join('');
+
+      const aulasHtml = aulas.map(n =>
         `<span class="aula-num-chip nav" title="Abrir no Escopo-Sequência" onclick="goToAula('${serie}','${comp}','${bim}',${n})">${n}</span>`
       ).join('');
 
       html += `
-        <div class="ae-card" id="ae-card-${ae.code}">
-          <div class="ae-card-top">
-            <span class="ae-num-badge">${ae.code}</span>
-            <div class="ae-desc">${ae.desc}</div>
+        <div class="ae-list-item" id="ae-card-${ae.ae}">
+          <div class="ae-list-header" onclick="this.parentElement.classList.toggle('open')">
+            <span class="ae-num-badge">${ae.ae}</span>
+            <div class="ae-list-titulo">${ae.titulo}</div>
+            <span class="ae-list-chevron">▾</span>
           </div>
-          <div class="ae-divider"></div>
-          <div class="ae-footer">
-            ${habsHtml ? `<div>
-              <div class="ae-footer-label">Habilidades</div>
-              <div class="ae-habs">${habsHtml}</div>
+          <div class="ae-list-body">
+            <div>
+              <div class="ae-detail-label">Habilidade Prioritária</div>
+              <div class="ae-detail-chips">${hpHtml}</div>
+            </div>
+            ${outrasHtml ? `<div>
+              <div class="ae-detail-label">Outras Habilidades</div>
+              <div class="ae-detail-chips">${outrasHtml}</div>
+            </div>` : ''}
+            ${previosHtml ? `<div>
+              <div class="ae-detail-label">Habilidades Prévias</div>
+              <div class="ae-detail-chips">${previosHtml}</div>
             </div>` : ''}
             ${aulasHtml ? `<div>
-              <div class="ae-footer-label">Aulas</div>
-              <div class="ae-aulas">${aulasHtml}</div>
+              <div class="ae-detail-label">Aulas Vinculadas</div>
+              <div class="ae-detail-chips">${aulasHtml}</div>
             </div>` : ''}
           </div>
         </div>`;
@@ -1613,13 +1653,15 @@ async function _initApp() {
 
     document.getElementById('_loading-msg').textContent = 'Carregando dados...';
 
-    const [af, em, maulaAF, maulaEM, mdescAF, mdescEM] = await Promise.all([
+    const [af, em, maulaAF, maulaEM, mdescAF, mdescEM, aeAF, aeEM] = await Promise.all([
       _fetchAll(client, 'escopo_af'),
       _fetchAll(client, 'escopo_em'),
       _fetchAll(client, 'matriz_aulas_af'),
       _fetchAll(client, 'matriz_aulas_em'),
       _fetchAll(client, 'matriz_descritores_af'),
       _fetchAll(client, 'matriz_descritores_em'),
+      _fetchAll(client, 'ae_detalhes_af'),
+      _fetchAll(client, 'ae_detalhes_em'),
     ]);
 
     DATA_AF        = af.map(_mapEscopoAF);
@@ -1628,6 +1670,8 @@ async function _initApp() {
     MATRIZ_AULAS_EM = maulaEM.map(_mapMatrizAulas);
     MATRIZ_DESC_AF  = mdescAF.map(_mapMatrizDesc);
     MATRIZ_DESC_EM  = mdescEM.map(_mapMatrizDesc);
+    AE_AF = aeAF;
+    AE_EM = aeEM;
 
     // Popular séries nos selects (Escopo + AE + Habilidades + Matriz)
     populateSeries();

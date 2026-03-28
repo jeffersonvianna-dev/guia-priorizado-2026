@@ -1068,10 +1068,11 @@ function mtzOnFiltro() {
   var compEl  = document.getElementById('mtz-sel-comp');
   var bimEl   = document.getElementById('mtz-sel-bim');
   var serie = serieEl.value;
-  var isAF = MATRIZ_AULAS_AF.some(function(r){ return r['Série'] === serie; });
-  var aulasData = isAF ? MATRIZ_AULAS_AF : MATRIZ_AULAS_EM;
+  var isAF = DATA_AF.some(function(r){ return r.Ano === serie; });
+  var escopoData = isAF ? DATA_AF : DATA_EM;
+  var serieKey = isAF ? 'Ano' : 'Serie';
   if (serie) {
-    var comps = [...new Set(aulasData.filter(function(r){ return r['Série'] === serie; }).map(function(r){ return r.Componente; }))].sort(function(a,b){ return a.localeCompare(b,'pt-BR'); });
+    var comps = [...new Set(escopoData.filter(function(r){ return r[serieKey] === serie && r.AE; }).map(function(r){ return r.Componente; }))].sort(function(a,b){ return a.localeCompare(b,'pt-BR'); });
     compEl.innerHTML = '<option value="">Selecione...</option>' + comps.map(function(c){ return '<option>' + c + '</option>'; }).join('');
     compEl.disabled = false;
   } else {
@@ -1092,9 +1093,10 @@ function mtzOnComp() {
   mtzCurrentAE = null;
   document.getElementById('mtz-detalhe').innerHTML = '';
   if (serie && comp) {
-    var isAF = MATRIZ_AULAS_AF.some(function(r){ return r['Série'] === serie; });
-    var aulasData = isAF ? MATRIZ_AULAS_AF : MATRIZ_AULAS_EM;
-    var bims = [...new Set(aulasData.filter(function(r){ return r['Série'] === serie && r.Componente === comp; }).map(function(r){ return r.Bimestre; }))].sort();
+    var isAF = DATA_AF.some(function(r){ return r.Ano === serie; });
+    var escopoData = isAF ? DATA_AF : DATA_EM;
+    var serieKey = isAF ? 'Ano' : 'Serie';
+    var bims = [...new Set(escopoData.filter(function(r){ return r[serieKey] === serie && r.Componente === comp && r.AE; }).map(function(r){ return r.Bimestre; }))].sort();
     bimEl.innerHTML = '<option value="">Todos</option>' + bims.map(function(b){ return '<option>' + b + '</option>'; }).join('');
     bimEl.disabled = false;
     mtzRender(serie, comp, '', isAF);
@@ -1110,21 +1112,32 @@ function mtzOnBim() {
   var comp  = document.getElementById('mtz-sel-comp').value;
   var bim   = document.getElementById('mtz-sel-bim').value;
   if (serie && comp) {
-    var isAF = MATRIZ_AULAS_AF.some(function(r){ return r['Série'] === serie; });
+    var isAF = DATA_AF.some(function(r){ return r.Ano === serie; });
     mtzRender(serie, comp, bim, isAF);
   }
 }
 
 function mtzRender(serie, comp, bim, isAF) {
-  var aulasData = isAF ? MATRIZ_AULAS_AF : MATRIZ_AULAS_EM;
-  var descData  = isAF ? MATRIZ_DESC_AF  : MATRIZ_DESC_EM;
-  var filteredAulas = aulasData.filter(function(r){ return r['Série'] === serie && r.Componente === comp && (!bim || r.Bimestre === bim); });
-  var filteredDesc  = descData.filter(function(r){ return r['Série'] === serie && r.Componente === comp && (!bim || r.Bimestre === bim); });
-  var aes = [...new Set(filteredAulas.map(function(r){ return r.AE; }))].sort(function(a,b){ return (parseInt(a.replace('AE',''))||0) - (parseInt(b.replace('AE',''))||0); });
+  var escopoData = isAF ? DATA_AF : DATA_EM;
+  var serieKey   = isAF ? 'Ano' : 'Serie';
+  var descData   = isAF ? MATRIZ_DESC_AF : MATRIZ_DESC_EM;
+  var filteredEscopo = escopoData.filter(function(r){
+    return r[serieKey] === serie && r.Componente === comp && r.AE && (!bim || r.Bimestre === bim);
+  });
+  var filteredDesc = descData.filter(function(r){
+    return r['Série'] === serie && r.Componente === comp && (!bim || r.Bimestre === bim);
+  });
+  var aes = [...new Set(filteredEscopo.map(function(r){
+    return (r.AE || '').split(/\s*-\s*/)[0].trim();
+  }).filter(Boolean))].sort(function(a,b){
+    return (parseInt(a.replace(/\D+/g,''))||0) - (parseInt(b.replace(/\D+/g,''))||0);
+  });
   var list = document.getElementById('mtz-ae-list');
   list.innerHTML = '<div class="mtz-ae-list">' +
     aes.map(function(ae, idx){
-      var nAulas = new Set(filteredAulas.filter(function(r){ return r.AE === ae; }).map(function(r){ return r.Aula; })).size;
+      var nAulas = new Set(filteredEscopo.filter(function(r){
+        return (r.AE||'').split(/\s*-\s*/)[0].trim() === ae;
+      }).map(function(r){ return r.Aula; })).size;
       var nDesc = filteredDesc.filter(function(r){ return r.AE === ae; }).length;
       return '<div class="hab-box' + (idx===0?' selected':'') + '" data-ae="' + ae + '" onclick="mtzSelectAE(\'' + ae + '\',\'' + serie + '\',\'' + comp + '\',' + isAF + ')"><span class="hab-code">' + ae + '</span><span class="hab-box-meta">' + nAulas + ' aulas · ' + nDesc + ' descritores</span></div>';
     }).join('') + '</div>';
@@ -1137,44 +1150,46 @@ function mtzSelectAE(ae, serie, comp, isAF) {
   document.querySelectorAll('#mtz-ae-list .hab-box').forEach(function(b){ b.classList.remove('selected'); });
   var btn = document.querySelector('#mtz-ae-list .hab-box[data-ae="' + ae + '"]');
   if (btn) btn.classList.add('selected');
-  var aulasData = isAF ? MATRIZ_AULAS_AF : MATRIZ_AULAS_EM;
-  var descData  = isAF ? MATRIZ_DESC_AF  : MATRIZ_DESC_EM;
   var escopoData = isAF ? DATA_AF : DATA_EM;
-  var escopoKey  = isAF ? 'Ano' : 'Serie';
-  var bimFiltro = document.getElementById('mtz-sel-bim').value;
-  var aulasRows = aulasData.filter(function(r){ return r['Série'] === serie && r.Componente === comp && r.AE === ae && (!bimFiltro || r.Bimestre === bimFiltro); });
-  var bimAulas = {};
-  aulasRows.forEach(function(r){
-    if (!bimAulas[r.Bimestre]) bimAulas[r.Bimestre] = [];
-    bimAulas[r.Bimestre].push(Number(r.Aula));
+  var serieKey   = isAF ? 'Ano' : 'Serie';
+  var descData   = isAF ? MATRIZ_DESC_AF : MATRIZ_DESC_EM;
+  var bimFiltro  = document.getElementById('mtz-sel-bim').value;
+
+  var escopoRows = escopoData.filter(function(r){
+    return r[serieKey] === serie && r.Componente === comp &&
+      (r.AE||'').split(/\s*-\s*/)[0].trim() === ae &&
+      (!bimFiltro || r.Bimestre === bimFiltro);
   });
-  var allAulaIds = aulasRows.map(function(r){ return Number(r.Aula); });
+
+  var bimAulas = {};
+  escopoRows.forEach(function(r){
+    if (!bimAulas[r.Bimestre]) bimAulas[r.Bimestre] = new Set();
+    bimAulas[r.Bimestre].add(Number(r.Aula));
+  });
+
   var habs = [...new Set(
-    escopoData.filter(function(r){ return r[escopoKey] === serie && r.Componente === comp && allAulaIds.includes(Number(r.Aula)); })
-      .map(function(r){ return r.Habilidades; }).filter(Boolean)
+    escopoRows.map(function(r){ return r.Habilidades; }).filter(Boolean)
+      .join(' ').split(/\s+/).filter(Boolean)
   )].sort();
+
   var descRows = descData.filter(function(r){ return r['Série'] === serie && r.Componente === comp && r.AE === ae && (!bimFiltro || r.Bimestre === bimFiltro); });
   var g1 = descRows.filter(function(r){ return r.Grupo === 'Grupo 1'; }).map(function(r){ return r.Descritor; });
   var g2 = descRows.filter(function(r){ return r.Grupo === 'Grupo 2'; }).map(function(r){ return r.Descritor; });
   var g3 = descRows.filter(function(r){ return r.Grupo === 'Grupo 3'; }).map(function(r){ return r.Descritor; });
   var aeText = (function(){
-    var row = escopoData.find(function(r){ return r[escopoKey] === serie && r.Componente === comp && (r['Aprendizagem Essencial']||'').indexOf(ae) === 0; });
+    var row = escopoRows[0];
     if (!row) return ae;
-    var txt = row['Aprendizagem Essencial'] || '';
-    var re = new RegExp(ae + '\\s*-\\s*([^A]+?)(?=AE\\d|$)', 'i');
-    var m = txt.match(re);
+    var txt = row.AE || '';
+    var m = txt.match(new RegExp(ae + '\\s*-\\s*(.+)$'));
     return m ? ae + ' - ' + m[1].trim() : ae;
   })();
-  function getAulaBim(n){
-    var row = aulasRows.find(function(r){ return Number(r.Aula) === n; });
-    return row ? row.Bimestre : '';
-  }
   var habsHtml = habs.length ? '<div style="display:flex;flex-wrap:wrap;gap:8px">' + habs.map(function(h){ return '<span class="mtz-hab-chip" onclick="goToHab(\'' + serie + '\',\'' + comp + '\',\'' + h + '\')" title="Ver na aba Habilidades">' + h + '</span>'; }).join('') + '</div>' : '<span style="color:var(--text-muted);font-size:.85rem">--</span>';
   var aulasHtml = Object.entries(bimAulas).sort().map(function(entry){
-    var bim = entry[0], nums = entry[1];
+    var bim = entry[0], numsSet = entry[1];
+    var nums = [...numsSet].sort(function(a,b){return a-b;});
     return '<div style="margin-bottom:8px"><span style="font-size:.78rem;color:var(--text-muted);display:block;margin-bottom:4px">' + bim + '</span><div style="display:flex;flex-wrap:wrap;gap:6px">' +
-      nums.sort(function(a,b){return a-b;}).map(function(n){
-        return '<span class="mtz-aula-chip" onclick="goToAula(\'' + serie + '\',\'' + comp + '\',\'' + getAulaBim(n) + '\',' + n + ')" title="Ver no Escopo">Aula ' + n + '</span>';
+      nums.map(function(n){
+        return '<span class="mtz-aula-chip" onclick="goToAula(\'' + serie + '\',\'' + comp + '\',\'' + bim + '\',' + n + ')" title="Ver no Escopo">Aula ' + n + '</span>';
       }).join('') + '</div></div>';
   }).join('');
   function grupoHtml(items, numLabel){
@@ -1649,8 +1664,6 @@ function buildResumo() {
 }
 
 // DADOS MATRIZ PROVA PAULISTA — carregados via Supabase
-let MATRIZ_AULAS_AF = []
-let MATRIZ_AULAS_EM = []
 let MATRIZ_DESC_AF = []
 let MATRIZ_DESC_EM = []
 
@@ -1669,10 +1682,6 @@ function _mapEscopoEM(r) {
   return { Componente: r.componente, Serie: r.serie, Bimestre: r.bimestre,
            Aula: r.aula, Titulo: r.titulo, Conteudo: r.conteudo,
            Objetivos: r.objetivos, Habilidades: r.habilidades, AE: r.aprendizagem_essencial };
-}
-function _mapMatrizAulas(r) {
-  return { 'Série': r.serie, Componente: r.componente, AE: r.ae,
-           'Unidade Temática': r.unidade_tematica, Bimestre: r.bimestre, Aula: r.aula };
 }
 function _mapMatrizDesc(r) {
   return { 'Série': r.serie, Componente: r.componente, AE: r.ae,
@@ -1700,11 +1709,9 @@ async function _initApp() {
 
     document.getElementById('_loading-msg').textContent = 'Carregando dados...';
 
-    const [af, em, maulaAF, maulaEM, mdescAF, mdescEM, aeAF, aeEM] = await Promise.all([
+    const [af, em, mdescAF, mdescEM, aeAF, aeEM] = await Promise.all([
       _fetchAll(client, 'escopo_af'),
       _fetchAll(client, 'escopo_em'),
-      _fetchAll(client, 'matriz_aulas_af'),
-      _fetchAll(client, 'matriz_aulas_em'),
       _fetchAll(client, 'matriz_descritores_af'),
       _fetchAll(client, 'matriz_descritores_em'),
       _fetchAll(client, 'ae_detalhes_af'),
@@ -1713,8 +1720,6 @@ async function _initApp() {
 
     DATA_AF        = af.map(_mapEscopoAF);
     DATA_EM        = em.map(_mapEscopoEM);
-    MATRIZ_AULAS_AF = maulaAF.map(_mapMatrizAulas);
-    MATRIZ_AULAS_EM = maulaEM.map(_mapMatrizAulas);
     MATRIZ_DESC_AF  = mdescAF.map(_mapMatrizDesc);
     MATRIZ_DESC_EM  = mdescEM.map(_mapMatrizDesc);
     AE_AF = aeAF;

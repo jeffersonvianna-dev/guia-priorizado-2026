@@ -1516,6 +1516,7 @@ function selectHab(idx, hab) {
 // ── ABAS ──
 var TAB_SERIE = { escopo:'sel-serie',    ae:'ae-sel-serie', hab:'hab-sel-serie', matriz:'mtz-sel-serie' };
 var TAB_COMP  = { escopo:'sel-comp',     ae:'ae-sel-comp',  hab:'hab-sel-comp',  matriz:'mtz-sel-comp'  };
+var TAB_BIM   = { escopo:'sel-bim',      hab:'hab-sel-bim', matriz:'mtz-sel-bim' };
 
 function getActiveFilters() {
   var panel = document.querySelector('.tab-panel.active');
@@ -1545,7 +1546,25 @@ function syncTabFilters(id, serie, comp) {
   }
 }
 
+// ── Histórico de navegação (botão Voltar) ──
+var _navReady = false;
+
+function _snapState() {
+  var panel = document.querySelector('.tab-panel.active');
+  if (!panel) return null;
+  var tab = panel.id.replace('tab-', '');
+  var s = { tab: tab };
+  if (TAB_SERIE[tab]) s.serie = (document.getElementById(TAB_SERIE[tab]) || {}).value || '';
+  if (TAB_COMP[tab])  s.comp  = (document.getElementById(TAB_COMP[tab])  || {}).value || '';
+  if (TAB_BIM[tab])   s.bim   = (document.getElementById(TAB_BIM[tab])   || {}).value || '';
+  return s;
+}
+
 function setTab(id, noSync) {
+  if (_navReady) {
+    history.replaceState(_snapState(), '');
+    history.pushState({ tab: id }, '', '#' + id);
+  }
   var f = noSync ? null : getActiveFilters();
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -1561,6 +1580,34 @@ function setTab(id, noSync) {
     if (!sameSerie || !sameComp) syncTabFilters(id, f.serie, f.comp);
   }
 }
+
+window.addEventListener('popstate', function(e) {
+  if (!e.state || !e.state.tab) return;
+  var s = e.state;
+  _navReady = false;
+  // Trocar aba sem empurrar mais histórico
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  var panel = document.getElementById('tab-' + s.tab);
+  if (panel) panel.classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    if (b.getAttribute('onclick') === "setTab('" + s.tab + "')") b.classList.add('active');
+  });
+  // Restaurar filtros
+  if (s.serie) {
+    syncTabFilters(s.tab, s.serie, s.comp);
+    if (s.bim && TAB_BIM[s.tab]) {
+      var bimEl = document.getElementById(TAB_BIM[s.tab]);
+      if (bimEl && bimEl.value !== s.bim) {
+        bimEl.value = s.bim;
+        if (s.tab === 'escopo') onFiltro();
+        else if (s.tab === 'hab') habOnFiltro();
+        else if (s.tab === 'matriz') mtzOnBim();
+      }
+    }
+  }
+  _navReady = true;
+});
 
 // ── TABELA RESUMO (Para Começar) ──
 function buildResumo() {
@@ -1695,6 +1742,8 @@ async function _initApp() {
     document.getElementById('hab-sel-comp').value = COMP;   habOnFiltro();
 
     document.getElementById('_loading-overlay').style.display = 'none';
+    _navReady = true;
+    history.replaceState(_snapState(), '', location.href);
 
   } catch (err) {
     console.error(err);

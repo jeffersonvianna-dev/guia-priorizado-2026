@@ -866,26 +866,15 @@ function render(serie, comp, bim) {
     return;
   }
 
-  const aulaMap = new Map();
-  for (const row of rows) {
-    if (!aulaMap.has(row.Aula)) {
-      aulaMap.set(row.Aula, {
-        num: row.Aula,
-        titulo: row.Titulo,
-        conteudo: row.Conteudo,
-        objetivos: row.Objetivos,
-        habilidades: [],
-        ae: row.AE
-      });
-    }
-    const a = aulaMap.get(row.Aula);
-    if (row.Habilidades && !a.habilidades.includes(row.Habilidades))
-      a.habilidades.push(row.Habilidades);
-    if (!a.ae && row.AE) a.ae = row.AE;
-  }
-
-  const aulas = [...aulaMap.values()].sort((a, b) => Number(a.num) - Number(b.num));
-  const totalHabs = [...new Set(rows.map(r => r.Habilidades).filter(Boolean))].length;
+  const aulas = rows.map(r => ({
+    num: r.Aula,
+    titulo: r.Titulo,
+    conteudo: r.Conteudo,
+    objetivos: r.Objetivos,
+    habilidades: (r.Habilidades||'').split(/\s+/).filter(Boolean),
+    ae: r.AE
+  })).sort((a, b) => Number(a.num) - Number(b.num));
+  const totalHabs = new Set(aulas.flatMap(a => a.habilidades)).size;
   const totalAulas = aulas.length;
   const aulasPorSemana = Math.ceil(totalAulas / 7);
 
@@ -1422,9 +1411,11 @@ function renderHabGrid(serie, comp, bim, data, key) {
   // Mapa: habilidade → { aulas }
   const habMap = new Map();
   for (const row of rows) {
-    const h = row.Habilidades;
-    if (!habMap.has(h)) habMap.set(h, { aulas: new Set() });
-    habMap.get(h).aulas.add(row.Aula);
+    const habs = (row.Habilidades||'').split(/\s+/).filter(Boolean);
+    for (const h of habs) {
+      if (!habMap.has(h)) habMap.set(h, { aulas: new Set() });
+      habMap.get(h).aulas.add(row.Aula);
+    }
   }
 
   const habs = [...habMap.keys()].sort();
@@ -1450,19 +1441,12 @@ function selectHab(idx, hab) {
   });
 
   const { serie, comp } = habCurrentCtx;
-  const aulaRows = habCurrentRows.filter(r => r.Habilidades === hab);
+  const aulaRows = habCurrentRows.filter(r => (r.Habilidades||'').split(/\s+/).includes(hab));
 
-  // Agrupar por aula (com todos os campos)
-  const aulaMap = new Map();
-  for (const row of aulaRows) {
-    if (!aulaMap.has(row.Aula)) {
-      aulaMap.set(row.Aula, {
-        num: row.Aula, bimestre: row.Bimestre, titulo: row.Titulo,
-        conteudo: row.Conteudo, objetivos: row.Objetivos, ae: row.AE
-      });
-    }
-  }
-  const aulas = [...aulaMap.values()].sort((a, b) => Number(a.num) - Number(b.num));
+  const aulas = aulaRows.map(r => ({
+    num: r.Aula, bimestre: r.Bimestre, titulo: r.Titulo,
+    conteudo: r.Conteudo, objetivos: r.Objetivos, ae: r.AE
+  })).sort((a, b) => Number(a.num) - Number(b.num));
 
   // AEs distintas desta habilidade (clicáveis)
   const aeCodes = [...new Set(

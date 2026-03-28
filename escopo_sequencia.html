@@ -1107,25 +1107,29 @@ function mtzOnBim() {
 }
 
 function mtzRender(serie, comp, bim, isAF) {
+  var aeData     = isAF ? AE_AF : AE_EM;
   var escopoData = isAF ? DATA_AF : DATA_EM;
   var serieKey   = isAF ? 'Ano' : 'Serie';
   var descData   = isAF ? MATRIZ_DESC_AF : MATRIZ_DESC_EM;
-  var filteredEscopo = escopoData.filter(function(r){
-    return r[serieKey] === serie && r.Componente === comp && r.AE && (!bim || r.Bimestre === bim);
+
+  var filteredAE = aeData.filter(function(r){
+    return r.serie === serie && r.componente === comp && (!bim || r.bimestre === bim);
   });
   var filteredDesc = descData.filter(function(r){
     return r['Série'] === serie && r.Componente === comp && (!bim || r.Bimestre === bim);
   });
-  var aes = [...new Set(filteredEscopo.map(function(r){
-    return (r.AE || '').split(/\s*-\s*/)[0].trim();
-  }).filter(Boolean))].sort(function(a,b){
+
+  var aes = [...new Set(filteredAE.map(function(r){ return r.ae; }).filter(Boolean))].sort(function(a,b){
     return (parseInt(a.replace(/\D+/g,''))||0) - (parseInt(b.replace(/\D+/g,''))||0);
   });
+
   var list = document.getElementById('mtz-ae-list');
   list.innerHTML = '<div class="mtz-ae-list">' +
     aes.map(function(ae, idx){
-      var nAulas = new Set(filteredEscopo.filter(function(r){
-        return (r.AE||'').split(/\s*-\s*/)[0].trim() === ae;
+      var nAulas = new Set(escopoData.filter(function(r){
+        return r[serieKey] === serie && r.Componente === comp &&
+          (r.AE||'').split(/\s*-\s*/)[0].trim() === ae &&
+          (!bim || r.Bimestre === bim);
       }).map(function(r){ return r.Aula; })).size;
       var nDesc = filteredDesc.filter(function(r){ return r.AE === ae; }).length;
       return '<div class="hab-box' + (idx===0?' selected':'') + '" data-ae="' + ae + '" onclick="mtzSelectAE(\'' + ae + '\',\'' + serie + '\',\'' + comp + '\',' + isAF + ')"><span class="hab-code">' + ae + '</span><span class="hab-box-meta">' + nAulas + ' aulas · ' + nDesc + ' descritores</span></div>';

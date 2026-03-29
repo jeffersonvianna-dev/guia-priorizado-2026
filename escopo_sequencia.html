@@ -7,7 +7,7 @@
 <style>
 :root {
   --blue: #005BAC;
-  --blue-pale: #e8f2fb;
+  --blue-pale: #e8f0f9;
   --orange: #F47920;
   --orange-light: #fff3e8;
   --gray: #f5f6fa;
@@ -22,7 +22,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--gray); 
 
 header {
   background: var(--blue); color: #fff;
-  padding: 18px 32px; display: flex; align-items: center; gap: 16px;
+  padding: 16px 24px; display: flex; align-items: center; gap: 16px;
   box-shadow: 0 2px 8px rgba(0,0,0,.2);
 }
 header .logo {
@@ -34,7 +34,7 @@ header h1 { font-size: 1.15rem; font-weight: 700; }
 header p { font-size: .78rem; color: #fff; font-weight: 600; margin-top: 2px; }
 
 .filtros {
-  background: #fff; padding: 20px 32px;
+  background: #fff; padding: 18px 24px;
   border-bottom: 1px solid var(--gray-mid);
   display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;
 }
@@ -1042,9 +1042,9 @@ function goToHab(serie, comp, hab) {
   habOnFiltro();
   document.getElementById('hab-sel-comp').value = comp;
   habOnFiltro(); // renderiza com Todos bimestres
-  // selecionar a habilidade alvo
-  const habs = [...new Set(habCurrentRows.map(r => r.Habilidades))].sort();
-  const idx = habs.indexOf(hab);
+  // selecionar a habilidade alvo — buscar pelo código no DOM gerado
+  const boxes = [...document.querySelectorAll('#hab-content .hab-box')];
+  const idx = boxes.findIndex(b => (b.querySelector('.hab-code') || {}).textContent === hab);
   if (idx !== -1) selectHab(idx, hab);
 }
 
@@ -1243,7 +1243,7 @@ function renderAE(serie, comp) {
   for (const row of escopoRows) {
     for (const ae of parseAEs(row.AE)) {
       if (!escopoByAE.has(ae.code)) escopoByAE.set(ae.code, { habilidades: new Set(), aulas: new Set() });
-      if (row.Habilidades) escopoByAE.get(ae.code).habilidades.add(row.Habilidades);
+      if (row.Habilidades) row.Habilidades.split(/\s+/).filter(Boolean).forEach(h => escopoByAE.get(ae.code).habilidades.add(h));
       if (row.Aula) escopoByAE.get(ae.code).aulas.add(Number(row.Aula));
     }
   }
@@ -1735,6 +1735,18 @@ async function _initApp() {
     document.getElementById('hab-sel-comp').value = COMP;   habOnFiltro();
 
     document.getElementById('_loading-overlay').style.display = 'none';
+
+    // Restaurar aba do hash (F5 mantém a aba ativa)
+    const _hashTab = location.hash.slice(1);
+    if (['ae','escopo','hab','matriz'].includes(_hashTab)) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + _hashTab).classList.add('active');
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        if (b.getAttribute('onclick') === `setTab('${_hashTab}')`) b.classList.add('active');
+      });
+    }
+
     _navReady = true;
     history.replaceState(_snapState(), '', location.href);
 

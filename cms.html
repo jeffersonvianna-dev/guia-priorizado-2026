@@ -458,6 +458,7 @@ function showModule(id) {
   document.getElementById('mod-' + id).classList.add('active')
   const tabId = {escopo:'tab-esc', ae:'tab-ae', matriz:'tab-mtz', cp:'tab-cp'}[id]
   document.getElementById(tabId).classList.add('active')
+  history.replaceState(null, '', '#' + id)
 }
 
 // ============================================================
@@ -1151,6 +1152,12 @@ async function deleteMde(id) {
 // ============================================================
 // MODULE 4: CURRÍCULO PAULISTA
 // ============================================================
+function _segFromCod(cod) {
+  if (/^EF0[1-5]/.test(cod)) return 'EFAI'
+  if (/^EF0[6-9]/.test(cod)) return 'EFAF'
+  if (/^EM/.test(cod))       return 'EM'
+  return null
+}
 var _cpRows = []
 var _cpEditId = null
 
@@ -1258,7 +1265,7 @@ async function saveCP() {
       }
     }
 
-    ;({ error } = await db().from('curriculo_paulista').update({ id_habilidade: cod, componente: comp, texto: texto || 'preencher habilidade' }).eq('id', _cpEditId))
+    ;({ error } = await db().from('curriculo_paulista').update({ id_habilidade: cod, componente: comp, texto: texto || 'preencher habilidade', segmento: _segFromCod(cod) }).eq('id', _cpEditId))
     if (!error && codChanged) {
       // Cascade: substituir oldCod por cod em todos os campos vinculados
       await Promise.all([
@@ -1281,7 +1288,7 @@ async function saveCP() {
       document.getElementById('modal-save').disabled = false
       toast(`Código "${cod}" já existe no Currículo Paulista.`, 'err'); return
     }
-    ;({ error } = await db().from('curriculo_paulista').insert({ id_habilidade: cod, componente: comp, texto: texto || 'preencher habilidade' }))
+    ;({ error } = await db().from('curriculo_paulista').insert({ id_habilidade: cod, componente: comp, texto: texto || 'preencher habilidade', segmento: _segFromCod(cod) }))
   }
   document.getElementById('modal-save').disabled = false
   if (error) { toast('Erro: ' + error.message, 'err'); return }
@@ -1373,7 +1380,10 @@ document.getElementById('cp-seg').value = 'EFAF';
 (async () => {
   await _fillCPComps('EFAF')
   document.getElementById('cp-comp').value = 'Matemática'
-  Promise.all([loadCP(), loadAE(), loadEscopo(), loadMatriz()])
+  await Promise.all([loadCP(), loadAE(), loadEscopo(), loadMatriz()])
+  // Restaurar módulo pelo hash (F5 mantém o módulo ativo)
+  const _hashMod = location.hash.slice(1)
+  if (['cp','ae','escopo','matriz'].includes(_hashMod)) showModule(_hashMod)
 })()
 </script>
 </body>

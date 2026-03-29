@@ -22,8 +22,12 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--gray); 
 
 header {
   background: var(--blue); color: #fff;
-  padding: 16px 24px; display: flex; align-items: center; gap: 16px;
   box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  position: sticky; top: 0; z-index: 10;
+}
+.header-inner {
+  max-width: 1100px; margin: 0 auto;
+  padding: 16px 24px; display: flex; align-items: center; gap: 16px;
 }
 header .logo {
   width: 42px; height: 42px; background: #fff; border-radius: 8px;
@@ -483,10 +487,12 @@ header p { font-size: .78rem; color: #fff; font-weight: 600; margin-top: 2px; }
 
 
 <header>
-  <div class="logo">CP</div>
-  <div>
-    <h1>Guia do Currículo Priorizado 2026</h1>
-    <p>SEDUC SP</p>
+  <div class="header-inner">
+    <div class="logo">CP</div>
+    <div>
+      <h1>Guia do Currículo Priorizado 2026</h1>
+      <p>SEDUC SP</p>
+    </div>
   </div>
 </header>
 

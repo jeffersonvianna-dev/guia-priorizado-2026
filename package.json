@@ -1,0 +1,19 @@
+{
+  "name": "guia-priorizado-2026",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:guia": "npm --workspace apps/guia run dev",
+    "dev:cms": "npm --workspace apps/cms run dev",
+    "build:guia": "npm --workspace apps/guia run build",
+    "build:cms": "npm --workspace apps/cms run build",
+    "lint:guia": "npm --workspace apps/guia run lint",
+    "lint:cms": "npm --workspace apps/cms run lint",
+    "build": "npm run build:guia && npm run build:cms",
+    "lint": "npm run lint:guia && npm run lint:cms"
+  }
+}

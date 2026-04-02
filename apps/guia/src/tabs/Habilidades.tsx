@@ -32,6 +32,7 @@ export function Habilidades({
   const [comp, setComp]   = useState(initialComp)
   const [bim, setBim]     = useState(initialBim)
   const [selHab, setSelHab] = useState(initialHab)
+  const [openCards, setOpenCards] = useState<Set<number>>(new Set())
 
   const allEscopo = useMemo(() => [...escopoAF, ...escopoEM], [escopoAF, escopoEM])
   const escopoData = isAfSerie(serie) ? escopoAF : escopoEM
@@ -79,6 +80,21 @@ export function Habilidades({
 
   const aulasSel = habMap.get(effectiveHab)?.aulas || []
 
+  // Abrir primeira aula quando hab selecionada muda
+  useEffect(() => {
+    const first = aulasSel[0]?.aula
+    if (first !== undefined) setOpenCards(new Set([first]))
+    else setOpenCards(new Set())
+  }, [effectiveHab])
+
+  function toggleCard(id: number) {
+    setOpenCards(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
   const placeholder = !serie
     ? { icon: '📚', title: 'Selecione uma série', sub: '' }
     : !comp
@@ -113,6 +129,7 @@ export function Habilidades({
           </div>
         ) : (
           <>
+            {/* Grid de habilidades — apenas código, sem meta */}
             <div className="hab-grid">
               {habs.map(h => (
                 <div
@@ -121,7 +138,6 @@ export function Habilidades({
                   onClick={() => setSelHab(h)}
                 >
                   <span className="c-hab-code">{h}</span>
-                  <span className="c-hab-box-meta">{habMap.get(h)!.aulas.length} aula{habMap.get(h)!.aulas.length !== 1 ? 's' : ''}</span>
                 </div>
               ))}
             </div>
@@ -133,64 +149,83 @@ export function Habilidades({
                   <div key={b} style={{ marginBottom: 16 }}>
                     <div style={{ marginBottom: 8 }}><span className="c-bim-chip">{b}</span></div>
                     {aulas.map(aula => {
+                      const open = openCards.has(aula.aula)
                       const semana = calcSemana(aula.aula, allAulaNums)
                       const aeCodes = (aula.aprendizagem_essencial || '').split(/\s+/).filter(Boolean)
                       const conteudoItems = fmtList(aula.conteudo)
                       const objItems = fmtList(aula.objetivos)
                       return (
-                        <div key={aula.id} className="c-aula-card" style={{ marginBottom: 8 }}>
-                          <div className="c-aula-card-header" style={{ cursor: 'default' }}>
+                        <div key={aula.id} className={`c-aula-card${open ? ' open' : ''}`} style={{ marginBottom: 8 }}>
+                          <div className="c-aula-card-header" onClick={() => toggleCard(aula.aula)}>
                             <div className="c-aula-numero">{aula.aula}</div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontWeight: 600, fontSize: '.9rem', marginBottom: 4 }}>{aula.titulo}</div>
-                              <div className="flex-chips">
-                                {semana > 0 && <span className="c-semana-chip">Semana {semana}</span>}
-                                <span
-                                  className="c-hab-chip"
-                                  onClick={() => onGoToAula(serie, comp, b, aula.aula)}
-                                  title="Ir para Escopo-Sequência"
-                                >
-                                  Ver na Sequência
-                                </span>
+                            <div className="c-aula-titulo">
+                              <div>{aula.titulo}</div>
+                              {!open && (
+                                <div className="flex-chips" style={{ marginTop: 4 }}>
+                                  {semana > 0 && <span className="c-semana-chip">Semana {semana}</span>}
+                                  <span
+                                    className="c-hab-chip"
+                                    onClick={e => { e.stopPropagation(); onGoToAula(serie, comp, b, aula.aula) }}
+                                    title="Ir para Escopo-Sequência"
+                                  >
+                                    Ver na Sequência
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <span className="c-expand-icon">▾</span>
+                          </div>
+                          {open && (
+                            <div className="c-aula-card-body">
+                              <div className="c-aula-grid">
+                                {conteudoItems.length > 0 && (
+                                  <div className="c-campo full">
+                                    <div className="c-campo-label">Conteúdo</div>
+                                    <div className="c-campo-valor">
+                                      {conteudoItems.length > 1
+                                        ? <ul>{conteudoItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                                        : conteudoItems[0]
+                                      }
+                                    </div>
+                                  </div>
+                                )}
+                                {objItems.length > 0 && (
+                                  <div className="c-campo full">
+                                    <div className="c-campo-label">Objetivos</div>
+                                    <div className="c-campo-valor">
+                                      {objItems.length > 1
+                                        ? <ul>{objItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                                        : objItems[0]
+                                      }
+                                    </div>
+                                  </div>
+                                )}
+                                {aeCodes.length > 0 && (
+                                  <div className="c-campo">
+                                    <div className="c-campo-label">AE</div>
+                                    <div className="flex-chips" style={{ marginTop: 4 }}>
+                                      {aeCodes.sort((a, b) => aeNatSort(a, b)).map(ae => (
+                                        <span key={ae} className="c-ae-badge nav" onClick={() => onGoToAE(serie, comp, ae)}>{ae}</span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                <div className="c-campo">
+                                  <div className="c-campo-label">Ir para</div>
+                                  <div className="flex-chips" style={{ marginTop: 4 }}>
+                                    {semana > 0 && <span className="c-semana-chip">Semana {semana}</span>}
+                                    <span
+                                      className="c-hab-chip"
+                                      onClick={() => onGoToAula(serie, comp, b, aula.aula)}
+                                      title="Ir para Escopo-Sequência"
+                                    >
+                                      Ver na Sequência
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="c-aula-card-body" style={{ display: 'block', padding: '0 16px 14px' }}>
-                            <div className="c-aula-grid">
-                              {conteudoItems.length > 0 && (
-                                <div className="c-campo full">
-                                  <div className="c-campo-label">Conteúdo</div>
-                                  <div className="c-campo-valor">
-                                    {conteudoItems.length > 1
-                                      ? <ul>{conteudoItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                                      : conteudoItems[0]
-                                    }
-                                  </div>
-                                </div>
-                              )}
-                              {objItems.length > 0 && (
-                                <div className="c-campo full">
-                                  <div className="c-campo-label">Objetivos</div>
-                                  <div className="c-campo-valor">
-                                    {objItems.length > 1
-                                      ? <ul>{objItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                                      : objItems[0]
-                                    }
-                                  </div>
-                                </div>
-                              )}
-                              {aeCodes.length > 0 && (
-                                <div className="c-campo">
-                                  <div className="c-campo-label">AE</div>
-                                  <div className="flex-chips" style={{ marginTop: 4 }}>
-                                    {aeCodes.sort((a, b) => aeNatSort(a, b)).map(ae => (
-                                      <span key={ae} className="c-ae-badge nav" onClick={() => onGoToAE(serie, comp, ae)}>{ae}</span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
+                          )}
                         </div>
                       )
                     })}

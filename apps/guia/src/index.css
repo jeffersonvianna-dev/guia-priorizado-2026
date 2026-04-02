@@ -74,7 +74,7 @@ body {
   display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end;
   padding: 14px max(var(--px), calc((100% - var(--max-w)) / 2 + var(--px)));
 }
-.c-filtro-group { display: flex; flex-direction: column; gap: 5px; min-width: 140px; }
+.c-filtro-group { display: flex; flex-direction: column; gap: 5px; min-width: 140px; width: fit-content; max-width: 260px; }
 .c-filtro-group label {
   font-size: .68rem; font-weight: 700; color: var(--text-muted);
   text-transform: uppercase; letter-spacing: .05em;

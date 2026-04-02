@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { db } from '../supabase'
 import { toast } from '../utils/toast'
+import { apiFetch } from '../utils/api'
 import { ChipInput } from '../components/ChipInput'
 import { ALL_SERIES, BIM_OPTIONS, compsFor, aeTbl, segFor, aeNatSort } from '../types'
 
@@ -62,9 +63,13 @@ export function AprendizagemEssencial() {
 
   async function deleteRow(row: AERow) {
     if (!confirm(`Excluir ${row.ae} — ${row.titulo}?`)) return
-    const { error } = await db.from(aeTbl(serie)).delete().eq('id', row.id)
-    if (error) toast('Erro ao excluir.', 'err')
-    else { toast('AE excluída.'); loadData() }
+    try {
+      await apiFetch(`/api/ae/${row.id}?serie=${encodeURIComponent(serie)}`, { method: 'DELETE' })
+      toast('AE excluída.')
+      loadData()
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Erro ao excluir.', 'err')
+    }
   }
 
   async function validateHab(h: string): Promise<boolean> {
@@ -79,18 +84,16 @@ export function AprendizagemEssencial() {
     if (hp.length === 0) { toast('Habilidade Prioritária obrigatória (*).', 'err'); return }
 
     const tbl = aeTbl(s)
-    // Unicidade de código
     const { data: dupCode } = await db.from(tbl).select('id').eq('serie', s).eq('componente', c).eq('ae', ae)
     if (dupCode && dupCode.length > 0 && editId !== dupCode[0].id) {
       toast(`Código ${ae} já existe para ${s}/${c}.`, 'err'); return
     }
-    // Unicidade de título
     const { data: dupTitle } = await db.from(tbl).select('id').eq('serie', s).eq('componente', c).eq('titulo', titulo)
     if (dupTitle && dupTitle.length > 0 && editId !== dupTitle[0].id) {
       toast(`Título já existe para ${s}/${c}.`, 'err'); return
     }
 
-    const row = {
+    const body = {
       segmento: segFor(s), serie: s, componente: c, bimestre: b || null,
       ae, titulo,
       hab_priorizada: hp.join(' '),
@@ -99,14 +102,18 @@ export function AprendizagemEssencial() {
     }
 
     setSaving(true)
-    if (editId) {
-      const { error } = await db.from(tbl).update(row).eq('id', editId)
-      if (error) toast('Erro ao atualizar.', 'err')
-      else { toast('AE atualizada.'); setShowModal(false); loadData() }
-    } else {
-      const { error } = await db.from(tbl).insert(row)
-      if (error) toast('Erro ao criar.', 'err')
-      else { toast('AE criada.'); setShowModal(false); loadData() }
+    try {
+      if (editId) {
+        await apiFetch(`/api/ae/${editId}`, { method: 'PATCH', body: JSON.stringify(body) })
+        toast('AE atualizada.')
+      } else {
+        await apiFetch('/api/ae', { method: 'POST', body: JSON.stringify(body) })
+        toast('AE criada.')
+      }
+      setShowModal(false)
+      loadData()
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Erro ao salvar.', 'err')
     }
     setSaving(false)
   }

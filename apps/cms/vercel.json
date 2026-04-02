@@ -1,6 +1,1 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "vite",
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist"
-}
+ewogICIkc2NoZW1hIjogImh0dHBzOi8vb3BlbmFwaS52ZXJjZWwuc2gvdmVyY2VsLmpzb24iLAogICJmcmFtZXdvcmsiOiAidml0ZSIsCiAgImJ1aWxkQ29tbWFuZCI6ICJucG0gcnVuIGJ1aWxkIiwKICAib3V0cHV0RGlyZWN0b3J5IjogImRpc3QiLAogICJyZXdyaXRlcyI6IFsKICAgIHsgInNvdXJjZSI6ICIvYXBpLyg/ISgpLiopIiwgImRlc3RpbmF0aW9uIjogIi9hcGkvJDEiIH0sCiAgICB7ICJzb3VyY2UiOiAiLyg/IWFwaS8pLioiLCAiZGVzdGluYXRpb24iOiAiL2luZGV4Lmh0bWwiIH0KICBdCn0K

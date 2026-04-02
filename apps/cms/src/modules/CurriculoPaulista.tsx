@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { db } from '../supabase'
 import { toast } from '../utils/toast'
+import { apiFetch } from '../utils/api'
 import { segFromCod } from '../types'
 
 interface CPRow {
@@ -31,7 +32,6 @@ export function CurriculoPaulista() {
     if (error) toast('Erro ao carregar.', 'err')
     else {
       setRows(data || [])
-      // Atualizar lista de componentes disponíveis para o segmento
       const uniq = [...new Set((data || []).map((r: CPRow) => r.componente))].sort()
       setCompsAvailable(uniq)
     }
@@ -39,7 +39,6 @@ export function CurriculoPaulista() {
   }, [seg, comp])
 
   useEffect(() => { loadData() }, [loadData])
-  // Ao mudar segmento, resetar componente
   useEffect(() => { setComp('') }, [seg])
 
   function openNew() {
@@ -56,7 +55,6 @@ export function CurriculoPaulista() {
 
   async function deleteRow(row: CPRow) {
     const pat = `%${row.id_habilidade}%`
-    // Contar vínculos
     const counts = await Promise.all([
       db.from('escopo_af').select('id', { count: 'exact', head: true }).ilike('habilidades', pat),
       db.from('escopo_em').select('id', { count: 'exact', head: true }).ilike('habilidades', pat),
@@ -73,38 +71,12 @@ export function CurriculoPaulista() {
       : `Excluir ${row.id_habilidade}?`
     if (!confirm(msg)) return
 
-    if (total > 0) {
-      await Promise.all([
-        removeCodFromField('escopo_af', 'habilidades', row.id_habilidade),
-        removeCodFromField('escopo_em', 'habilidades', row.id_habilidade),
-        removeCodFromField('ae_detalhes_af', 'hab_priorizada', row.id_habilidade),
-        removeCodFromField('ae_detalhes_af', 'hab_relacionadas', row.id_habilidade),
-        removeCodFromField('ae_detalhes_af', 'conhecimentos_previos', row.id_habilidade),
-        removeCodFromField('ae_detalhes_em', 'hab_priorizada', row.id_habilidade),
-        removeCodFromField('ae_detalhes_em', 'hab_relacionadas', row.id_habilidade),
-        removeCodFromField('ae_detalhes_em', 'conhecimentos_previos', row.id_habilidade),
-      ])
-    }
-    await db.from('curriculo_paulista').delete().eq('id', row.id)
-    toast('Habilidade excluída.')
-    loadData()
-  }
-
-  async function removeCodFromField(table: string, field: string, cod: string) {
-    const { data } = await db.from(table).select(`id,${field}`).ilike(field, `%${cod}%`)
-    for (const r of data || []) {
-      const updated = (((r as any)[field] as string) || '')
-        .split(/\s+/).filter((h: string) => h !== cod).join(' ').trim() || null
-      await db.from(table).update({ [field]: updated }).eq('id', (r as any).id)
-    }
-  }
-
-  async function renameCodInField(table: string, field: string, oldC: string, newC: string) {
-    const { data } = await db.from(table).select(`id,${field}`).ilike(field, `%${oldC}%`)
-    for (const r of data || []) {
-      const updated = (((r as any)[field] as string) || '')
-        .split(/\s+/).map((h: string) => h === oldC ? newC : h).join(' ').trim() || null
-      await db.from(table).update({ [field]: updated }).eq('id', (r as any).id)
+    try {
+      await apiFetch(`/api/curriculo/${row.id}`, { method: 'DELETE' })
+      toast('Habilidade excluída.')
+      loadData()
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Erro ao excluir.', 'err')
     }
   }
 
@@ -114,7 +86,6 @@ export function CurriculoPaulista() {
     const segmento = segFromCod(cod)
     if (!segmento) { toast('Código inválido. Use EF01-09 ou EM.', 'err'); return }
 
-    // Verificar unicidade do código
     if (!editId || cod !== oldCod) {
       const { data: dup } = await db.from('curriculo_paulista').select('id').eq('id_habilidade', cod)
       if (dup && dup.length > 0 && editId !== dup[0].id) {
@@ -122,30 +93,21 @@ export function CurriculoPaulista() {
       }
     }
 
-    setSaving(true)
-    const row = { id_habilidade: cod, componente, serie, segmento, texto }
+    const body = { id_habilidade: cod, componente, serie, texto }
 
-    if (editId) {
-      // Cascade rename se o código mudou
-      if (cod !== oldCod) {
-        await Promise.all([
-          renameCodInField('escopo_af', 'habilidades', oldCod, cod),
-          renameCodInField('escopo_em', 'habilidades', oldCod, cod),
-          renameCodInField('ae_detalhes_af', 'hab_priorizada', oldCod, cod),
-          renameCodInField('ae_detalhes_af', 'hab_relacionadas', oldCod, cod),
-          renameCodInField('ae_detalhes_af', 'conhecimentos_previos', oldCod, cod),
-          renameCodInField('ae_detalhes_em', 'hab_priorizada', oldCod, cod),
-          renameCodInField('ae_detalhes_em', 'hab_relacionadas', oldCod, cod),
-          renameCodInField('ae_detalhes_em', 'conhecimentos_previos', oldCod, cod),
-        ])
+    setSaving(true)
+    try {
+      if (editId) {
+        await apiFetch(`/api/curriculo/${editId}`, { method: 'PATCH', body: JSON.stringify(body) })
+        toast('Habilidade atualizada.')
+      } else {
+        await apiFetch('/api/curriculo', { method: 'POST', body: JSON.stringify(body) })
+        toast('Habilidade criada.')
       }
-      const { error } = await db.from('curriculo_paulista').update(row).eq('id', editId)
-      if (error) toast('Erro ao atualizar.', 'err')
-      else { toast('Habilidade atualizada.'); setShowModal(false); loadData() }
-    } else {
-      const { error } = await db.from('curriculo_paulista').insert(row)
-      if (error) toast('Erro ao criar.', 'err')
-      else { toast('Habilidade criada.'); setShowModal(false); loadData() }
+      setShowModal(false)
+      loadData()
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Erro ao salvar.', 'err')
     }
     setSaving(false)
   }

@@ -49,31 +49,29 @@ Entregável: `apps/cms` — React 19 + Vite + TypeScript
 - max-width: 1200px
 
 ⏳ Pendente para produção:
-- [ ] Implementar Vercel Functions em `api/` (service role server-side para mutações)
-- [ ] Configurar env vars no Vercel: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- [ ] Configurar env vars no Vercel: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `CMS_ADMIN_PASSWORD`, `CMS_SESSION_SECRET`
 - [ ] Validar que service role NÃO aparece no frontend (DevTools > Network)
 
-### ⏳ Fase 5 — Backend (Vercel Functions)
-Prioridade: implementar antes do deploy do CMS em produção.
-
-Estrutura:
+### ✅ Fase 5 — Backend (Vercel Functions) (concluída — 2026-04-02)
+Estrutura implementada em `apps/cms/api/`:
 ```
 apps/cms/api/
-├── escopo/
-│   ├── index.ts   ← POST (insert)
-│   └── [id].ts    ← PUT (update), DELETE
-├── ae/
-│   ├── index.ts
-│   └── [id].ts
-├── matriz/
-│   ├── index.ts
-│   └── [id].ts
-└── curriculo/
-    ├── index.ts
-    └── [id].ts    ← cascade rename/delete aqui
+├── _lib/
+│   ├── ae.ts, escopo.ts, matriz.ts, curriculo.ts
+│   ├── auth.ts, supabase-admin.ts, http.ts
+├── ae/index.ts, ae/[id].ts
+├── escopo/index.ts, escopo/[id].ts
+├── matriz/index.ts, matriz/[id].ts
+├── curriculo/index.ts, curriculo/[id].ts
+├── habilidades/
+├── auth.ts, health.ts
 ```
 
-Cada function usa `SUPABASE_SERVICE_ROLE_KEY` (nunca exposta no frontend).
+Frontend conectado às Functions (`src/utils/api.ts` + `apiFetch`):
+- Todos os módulos usam `apiFetch` para mutations (POST/PATCH/DELETE)
+- Leituras continuam via anon key (SELECT público, RLS configurado)
+- Login/logout via cookie de sessão (`cms_session`, HMAC-SHA256, 7 dias)
+- `SUPABASE_SERVICE_ROLE_KEY` nunca exposta no frontend
 
 ### ⏳ Fase 6 — Paridade e validação
 Checklist mínimo:
@@ -86,10 +84,11 @@ Checklist mínimo:
 - [ ] Validação de habilidades (chips vs curriculo_paulista)
 - [ ] Cascade rename/delete funciona via Vercel Function
 - [ ] Sort natural de AEs (AE1, AE2…AE10)
+- [ ] Login/logout do CMS funciona
 
 ### ⏳ Fase 7 — Publicação final
-- [ ] Env vars configuradas no Vercel para guia
-- [ ] Env vars configuradas no Vercel para cms (incluindo service role)
+- [ ] Env vars configuradas no Vercel para guia (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`)
+- [ ] Env vars configuradas no Vercel para cms (incluindo `SUPABASE_SERVICE_ROLE_KEY`, `CMS_ADMIN_PASSWORD`, `CMS_SESSION_SECRET`)
 - [ ] Validar guia em produção
 - [ ] Validar cms em produção
 - [ ] Após validação: descontinuar HTMLs estáticos (cms.html, escopo_sequencia.html)
@@ -102,8 +101,8 @@ Checklist mínimo:
 |---------|---------|--------|
 | Mutações CMS | Vercel Functions | Service role nunca no frontend |
 | Leitura guia | Frontend direto (anon key) | Dados públicos, RLS SELECT configurado |
-| Schema | guia_priorizado | Isolamento do schema público |
-| Auth CMS | Sem auth (v1) | Fase 1: funcional antes de seguro |
+| Schema | 2026_guia_priorizado | Isolamento do schema público |
+| Auth CMS | Cookie HMAC-SHA256, 7 dias | Simples, seguro, sem dependência externa |
 | Design System | @jeffersonvianna-dev/design-system | Consistência visual cross-project |
 
 ## Regras críticas (não esquecer)
@@ -112,5 +111,5 @@ Checklist mínimo:
 2. Habilidades: sempre `.split(/\s+/).filter(Boolean)`
 3. AE sort: `localeCompare(b, undefined, { numeric: true })`
 4. Segmento no CP: incluir em INSERT **e** UPDATE
-5. Cascade rename: propagar para escopo_af/em + ae_detalhes_af/em
+5. Cascade rename/delete: tratado nas Vercel Functions (`_lib/curriculo.ts`)
 6. ChipInput Matriz PP: reinicializar ao mudar série ou componente

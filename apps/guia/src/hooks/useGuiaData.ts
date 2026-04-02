@@ -16,10 +16,10 @@ export interface GuiaData {
 }
 
 function mapAF(r: EscopoAFRow): EscopoRow {
-  return { ...r, serie: r.ano, segmento: 'AF' }
+  return { ...r, serie: r.ano, aula: Number(r.aula), segmento: 'AF' }
 }
 function mapEM(r: EscopoEMRow): EscopoRow {
-  return { ...r, segmento: 'EM' }
+  return { ...r, aula: Number(r.aula), segmento: 'EM' }
 }
 
 export function useGuiaData(): GuiaData {

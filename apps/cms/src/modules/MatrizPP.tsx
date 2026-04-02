@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { db } from '../supabase'
 import { toast } from '../utils/toast'
+import { apiFetch } from '../utils/api'
 import { ChipInput } from '../components/ChipInput'
 import { ALL_SERIES, BIM_OPTIONS, compsFor, mdeTbl, aeTbl, aeNatSort } from '../types'
 
@@ -42,8 +43,6 @@ export function MatrizPP() {
   }, [serie, comp])
 
   useEffect(() => { loadData() }, [loadData])
-
-  // Quando série ou comp mudam, resetar AE selecionada
   useEffect(() => { setSelAE('') }, [serie, comp])
 
   const aes = useMemo(() => {
@@ -77,9 +76,13 @@ export function MatrizPP() {
 
   async function deleteRow(row: MdeRow) {
     if (!confirm(`Excluir descritor: "${row.descritor.substring(0,50)}…"?`)) return
-    const { error } = await db.from(mdeTbl(serie)).delete().eq('id', row.id)
-    if (error) toast('Erro ao excluir.', 'err')
-    else { toast('Descritor excluído.'); loadData() }
+    try {
+      await apiFetch(`/api/matriz/${row.id}`, { method: 'DELETE' })
+      toast('Descritor excluído.')
+      loadData()
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Erro ao excluir.', 'err')
+    }
   }
 
   async function save() {
@@ -87,26 +90,28 @@ export function MatrizPP() {
     if (!s || !c || !grupo || !descritor) { toast('Preencha os campos obrigatórios (*).', 'err'); return }
     if (aeChip.length === 0) { toast('Selecione uma AE (*).', 'err'); return }
 
-    const row = {
+    const body = {
       serie: s, componente: c, ae: aeChip[0],
       bimestre: bim || null, grupo, descritor,
     }
     setSaving(true)
-    if (editId) {
-      const { error } = await db.from(mdeTbl(s)).update(row).eq('id', editId)
-      if (error) toast('Erro ao atualizar.', 'err')
-      else { toast('Descritor atualizado.'); setShowModal(false); loadData() }
-    } else {
-      const { error } = await db.from(mdeTbl(s)).insert(row)
-      if (error) toast('Erro ao criar.', 'err')
-      else { toast('Descritor criado.'); setShowModal(false); loadData() }
+    try {
+      if (editId) {
+        await apiFetch(`/api/matriz/${editId}`, { method: 'PATCH', body: JSON.stringify(body) })
+        toast('Descritor atualizado.')
+      } else {
+        await apiFetch('/api/matriz', { method: 'POST', body: JSON.stringify(body) })
+        toast('Descritor criado.')
+      }
+      setShowModal(false)
+      loadData()
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Erro ao salvar.', 'err')
     }
     setSaving(false)
   }
 
   function set(f: keyof FormData, v: string) { setForm(p => ({ ...p, [f]: v })) }
-
-  // Ao mudar série ou comp no formulário, resetar chip de AE
   function handleFormSerie(v: string) { set('serie', v); set('comp', ''); setAeChip([]) }
   function handleFormComp(v: string)  { set('comp', v); setAeChip([]) }
 
@@ -135,7 +140,6 @@ export function MatrizPP() {
           <div className="c-placeholder"><div className="icon">📝</div><h2>Selecione uma série</h2></div>
         ) : (
           <>
-            {/* Grid de AEs */}
             {aes.length > 0 && (
               <div style={{ marginBottom: 20 }}>
                 <div className="c-section-h">Aprendizagens Essenciais</div>

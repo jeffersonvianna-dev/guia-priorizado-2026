@@ -49,7 +49,7 @@ export function Filtros({ escopo, serie, comp, bim, showBim = true, onSerie, onC
   return (
     <div className="c-filtros">
       <div className="c-filtro-group">
-        <label>Série / Ano{segLabel ? ` — ${segLabel}` : ''}</label>
+        <label>Série / Ano{segLabel ? ` · ${segLabel}` : ''}</label>
         <select value={serie} onChange={e => handleSerie(e.target.value)}>
           <option value="">Selecione...</option>
           {series.map(s => <option key={s} value={s}>{s}</option>)}

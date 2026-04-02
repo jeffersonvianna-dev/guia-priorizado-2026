@@ -1,0 +1,221 @@
+import { useState, useMemo } from 'react'
+import { AeDetalhesRow, EscopoRow, MatrizDescritoresRow, getHabs, aeNatSort, isAfSerie } from '../types'
+import { Filtros } from '../components/Filtros'
+
+interface Props {
+  aeAF: AeDetalhesRow[]
+  aeEM: AeDetalhesRow[]
+  escopoAF: EscopoRow[]
+  escopoEM: EscopoRow[]
+  matrizAF: MatrizDescritoresRow[]
+  matrizEM: MatrizDescritoresRow[]
+  initialSerie?: string
+  initialComp?: string
+  onGoToHab:  (serie: string, comp: string, hab: string) => void
+  onGoToAula: (serie: string, comp: string, bim: string, aula: number) => void
+  onFiltersChange?: (serie: string, comp: string) => void
+}
+
+const GRUPOS = ['Grupo 1','Grupo 2','Grupo 3']
+
+export function MatrizPP({
+  aeAF, aeEM, escopoAF, escopoEM, matrizAF, matrizEM,
+  initialSerie = '', initialComp = '',
+  onGoToHab, onGoToAula, onFiltersChange,
+}: Props) {
+  const [serie, setSerie] = useState(initialSerie)
+  const [comp, setComp]   = useState(initialComp)
+  const [selAE, setSelAE] = useState('')
+
+  const allEscopo = useMemo(() => [...escopoAF, ...escopoEM], [escopoAF, escopoEM])
+  const isAF = isAfSerie(serie)
+  const aeData    = isAF ? aeAF    : aeEM
+  const escopoData= isAF ? escopoAF: escopoEM
+  const matrizData= isAF ? matrizAF: matrizEM
+
+  function handleSerie(v: string) { setSerie(v); setComp(''); setSelAE(''); onFiltersChange?.(v,'') }
+  function handleComp(v: string)  { setComp(v);  setSelAE(''); onFiltersChange?.(serie,v) }
+
+  // AEs disponíveis para a série+comp
+  const aes = useMemo(() => {
+    if (!serie || !comp) return []
+    return [...new Set(
+      aeData.filter(r => r.serie === serie && r.componente === comp).map(r => r.ae)
+    )].sort(aeNatSort)
+  }, [aeData, serie, comp])
+
+  const effectiveAE = selAE && aes.includes(selAE) ? selAE : (aes[0] || '')
+
+  // Habilidades do AE selecionado (via ae_detalhes)
+  const aeRow = useMemo(() => aeData.find(
+    r => r.serie === serie && r.componente === comp && r.ae === effectiveAE
+  ), [aeData, serie, comp, effectiveAE])
+
+  // Aulas vinculadas ao AE (pelo campo aprendizagem_essencial)
+  const aulasDoAE = useMemo(() => {
+    if (!effectiveAE || !serie || !comp) return []
+    return escopoData.filter(r =>
+      r.serie === serie && r.componente === comp &&
+      (r.aprendizagem_essencial || '').split(/\s+/).includes(effectiveAE)
+    )
+  }, [escopoData, serie, comp, effectiveAE])
+
+  // Descritores por grupo
+  const descByGrupo = useMemo(() => {
+    if (!effectiveAE) return new Map<string, MatrizDescritoresRow[]>()
+    const rows = matrizData.filter(r =>
+      r.serie === serie && r.componente === comp && r.ae === effectiveAE
+    )
+    const map = new Map<string, MatrizDescritoresRow[]>()
+    for (const r of rows) {
+      if (!map.has(r.grupo)) map.set(r.grupo, [])
+      map.get(r.grupo)!.push(r)
+    }
+    return map
+  }, [matrizData, serie, comp, effectiveAE])
+
+  const hpChips = aeRow ? getHabs(aeRow.hab_priorizada) : []
+  const hrChips = aeRow?.hab_relacionadas ? getHabs(aeRow.hab_relacionadas) : []
+
+  const grupoCores: Record<string, string> = {
+    'Grupo 1': 'var(--blue)',
+    'Grupo 2': 'var(--orange)',
+    'Grupo 3': 'var(--green)',
+  }
+
+  const placeholder = !serie
+    ? { icon: '📝', title: 'Selecione uma série', sub: '' }
+    : !comp
+    ? { icon: '📝', title: 'Selecione o componente', sub: '' }
+    : aes.length === 0
+    ? { icon: '💭', title: 'Nenhuma AE com descritores', sub: '' }
+    : null
+
+  return (
+    <>
+      <Filtros
+        escopo={allEscopo}
+        serie={serie} comp={comp} bim=""
+        showBim={false}
+        onSerie={handleSerie} onComp={handleComp}
+      />
+      <div className="c-content">
+        {placeholder ? (
+          <div className="c-placeholder">
+            <div className="icon">{placeholder.icon}</div>
+            <h2>{placeholder.title}</h2>
+          </div>
+        ) : (
+          <>
+            {/* Grid de AEs selecionáveis */}
+            <div className="c-section-h" style={{ marginBottom: 12 }}>Aprendizagens Essenciais</div>
+            <div className="hab-grid" style={{ marginBottom: 24 }}>
+              {aes.map(ae => {
+                const descCount = matrizData.filter(
+                  r => r.serie === serie && r.componente === comp && r.ae === ae
+                ).length
+                return (
+                  <div
+                    key={ae}
+                    className={`c-hab-box${effectiveAE === ae ? ' selected' : ''}`}
+                    onClick={() => setSelAE(ae)}
+                  >
+                    <span className="c-hab-code">{ae}</span>
+                    <span className="c-hab-box-meta">{descCount} descritor{descCount !== 1 ? 'es' : ''}</span>
+                  </div>
+                )
+              })}
+            </div>
+
+            {effectiveAE && (
+              <>
+                {/* Habilidades */}
+                {(hpChips.length > 0 || hrChips.length > 0) && (
+                  <div style={{ marginBottom: 20 }}>
+                    <div className="c-section-h">Habilidades — {effectiveAE}</div>
+                    {hpChips.length > 0 && (
+                      <div style={{ marginBottom: 8 }}>
+                        <div className="c-campo-label" style={{ marginBottom: 6 }}>Prioritária</div>
+                        <div className="flex-chips">
+                          {hpChips.map(h => (
+                            <span key={h} className="c-hab-chip" onClick={() => onGoToHab(serie, comp, h)}>{h}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {hrChips.length > 0 && (
+                      <div>
+                        <div className="c-campo-label" style={{ marginBottom: 6 }}>Relacionadas</div>
+                        <div className="flex-chips">
+                          {hrChips.map(h => (
+                            <span key={h} className="c-hab-chip" onClick={() => onGoToHab(serie, comp, h)}>{h}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Aulas vinculadas */}
+                {aulasDoAE.length > 0 && (
+                  <div style={{ marginBottom: 20 }}>
+                    <div className="c-section-h">Aulas Vinculadas</div>
+                    <div className="flex-chips">
+                      {aulasDoAE.map(a => (
+                        <span
+                          key={a.id}
+                          className="c-hab-chip"
+                          onClick={() => onGoToAula(serie, comp, a.bimestre, a.aula)}
+                          title={a.titulo}
+                        >
+                          Aula {a.aula} — {a.bimestre}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Grupos de descritores */}
+                <div className="c-section-h">Descritores por Grupo</div>
+                <div className="grid-3" style={{ marginTop: 12 }}>
+                  {GRUPOS.map(grupo => {
+                    const descs = descByGrupo.get(grupo) || []
+                    return (
+                      <div key={grupo} className="c-aula-card" style={{ borderTop: `3px solid ${grupoCores[grupo]}` }}>
+                        <div style={{ padding: '12px 16px 4px' }}>
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              background: grupoCores[grupo],
+                              color: '#fff', borderRadius: 6,
+                              padding: '2px 10px', fontSize: '.76rem', fontWeight: 800,
+                              marginBottom: 10,
+                            }}
+                          >{grupo}</span>
+                          {descs.length === 0 ? (
+                            <p style={{ fontSize: '.82rem', color: 'var(--text-muted)' }}>Nenhum descritor</p>
+                          ) : (
+                            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              {descs.map(d => (
+                                <li key={d.id} style={{ fontSize: '.84rem', lineHeight: 1.55 }}>
+                                  {d.bimestre && (
+                                    <span className="c-bim-chip" style={{ marginBottom: 4, display: 'inline-block' }}>{d.bimestre}</span>
+                                  )}
+                                  <div>{d.descritor}</div>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </>
+  )
+}

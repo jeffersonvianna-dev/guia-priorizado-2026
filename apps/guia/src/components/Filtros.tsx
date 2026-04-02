@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { EscopoRow, sortSeries, sortBim, isAfSerie, BIM_ORDER } from '../types'
+import { type EscopoRow, sortSeries, sortBim, isAfSerie, BIM_ORDER } from '../types'
 
 interface FiltrosProps {
   escopo: EscopoRow[]          // dados completos (AF + EM)

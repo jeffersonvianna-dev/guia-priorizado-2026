@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { EscopoRow, getHabs, fmtList, aeNatSort, isAfSerie, BIM_ORDER } from '../types'
+import { type EscopoRow, getHabs, fmtList, aeNatSort, isAfSerie, BIM_ORDER } from '../types'
 import { Filtros } from '../components/Filtros'
 
 interface Props {

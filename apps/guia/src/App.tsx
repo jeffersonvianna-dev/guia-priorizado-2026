@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useGuiaData } from './hooks/useGuiaData'
-import { useNavigation, TabId } from './hooks/useNavigation'
+import { useNavigation, type TabId } from './hooks/useNavigation'
 import { Header } from './components/Header'
 import { ParaComecar } from './tabs/ParaComecar'
 import { AprendizagemEssencial } from './tabs/AprendizagemEssencial'
@@ -23,7 +23,7 @@ export default function App() {
   // Estado de cross-tab: hab a selecionar quando chegar em Habilidades
   const [targetHab,  setTargetHab]  = useState('')
   const [scrollAula, setScrollAula] = useState<number | null>(null)
-  const scrollAulaTimer = useRef<ReturnType<typeof setTimeout>>()
+  const scrollAulaTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   /* ── Cross-tab navigation ──────────────────────────────────── */
 

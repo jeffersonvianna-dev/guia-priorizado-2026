@@ -93,18 +93,18 @@ export function CurriculoPaulista() {
   async function removeCodFromField(table: string, field: string, cod: string) {
     const { data } = await db.from(table).select(`id,${field}`).ilike(field, `%${cod}%`)
     for (const r of data || []) {
-      const updated = ((r[field] as string) || '')
+      const updated = (((r as any)[field] as string) || '')
         .split(/\s+/).filter((h: string) => h !== cod).join(' ').trim() || null
-      await db.from(table).update({ [field]: updated }).eq('id', r.id)
+      await db.from(table).update({ [field]: updated }).eq('id', (r as any).id)
     }
   }
 
   async function renameCodInField(table: string, field: string, oldC: string, newC: string) {
     const { data } = await db.from(table).select(`id,${field}`).ilike(field, `%${oldC}%`)
     for (const r of data || []) {
-      const updated = ((r[field] as string) || '')
+      const updated = (((r as any)[field] as string) || '')
         .split(/\s+/).map((h: string) => h === oldC ? newC : h).join(' ').trim() || null
-      await db.from(table).update({ [field]: updated }).eq('id', r.id)
+      await db.from(table).update({ [field]: updated }).eq('id', (r as any).id)
     }
   }
 

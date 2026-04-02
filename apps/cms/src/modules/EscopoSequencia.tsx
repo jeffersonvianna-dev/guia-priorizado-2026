@@ -3,7 +3,7 @@ import { db } from '../supabase'
 import { toast } from '../utils/toast'
 import { ChipInput } from '../components/ChipInput'
 import {
-  ALL_SERIES, BIM_OPTIONS, compsFor, isAF, escopoTbl, serieCol, aeNatSort,
+  ALL_SERIES, BIM_OPTIONS, compsFor, isAF, escopoTbl, serieCol,
 } from '../types'
 
 interface EscopoRow {

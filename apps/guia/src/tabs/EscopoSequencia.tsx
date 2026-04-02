@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { EscopoRow, getHabs, fmtList, isAfSerie } from '../types'
+import { type EscopoRow, getHabs, fmtList, isAfSerie } from '../types'
 import { Filtros } from '../components/Filtros'
 
 interface Props {

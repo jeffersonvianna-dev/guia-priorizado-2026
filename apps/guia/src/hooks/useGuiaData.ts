@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchAll } from '../supabase'
 import {
-  EscopoAFRow, EscopoEMRow, EscopoRow, AeDetalhesRow, MatrizDescritoresRow,
-  isAfSerie,
+  type EscopoAFRow, type EscopoEMRow, type EscopoRow, type AeDetalhesRow, type MatrizDescritoresRow,
 } from '../types'
 
 export interface GuiaData {

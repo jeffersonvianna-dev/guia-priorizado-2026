@@ -1,136 +1,116 @@
-# Migration Plan
+# Migration Plan — Guia Priorizado 2026
+> Última atualização: 2026-04-02
 
 ## Objetivo
 
-Migrar o `guia-priorizado-2026` de dois HTMLs estaticos para uma arquitetura moderna com:
-
-- frontend React para o guia publico
+Migrar o `guia-priorizado-2026` de dois HTMLs estáticos para uma arquitetura moderna com:
+- frontend React para o guia público
 - frontend React para o CMS
 - core de backend compartilhado
 - Supabase versionado no GitHub
-- publicacao no Vercel para os dois apps
+- publicação no Vercel para os dois apps
 
-## Resultado esperado
+---
 
-### Guia publico
+## Status das Fases
 
-- manter as 5 abas do guia atual
-- preservar navegacao cruzada entre habilidades, AE, matriz e escopo
-- melhorar performance e organizacao do codigo
-- publicar no Vercel
+### ✅ Fase 1 — Mapeamento e banco (concluída)
+- Projeto Supabase: Cactus Tech | ID: aingjvjyqhijogpyikii (mesmo da Copa da Escola) | Schema: 2026_guia_priorizado
+- Tabelas versionadas e populadas:
+  - `escopo_af` (~1324 rows) — coluna `ano` (não `serie`!)
+  - `escopo_em` (~895 rows) — coluna `serie`
+  - `ae_detalhes_af` (204 rows), `ae_detalhes_em` (125 rows)
+  - `matriz_descritores_af` (644 rows), `matriz_descritores_em` (646 rows)
+  - `curriculo_paulista` — com segmento derivado do id_habilidade
+- RLS configurado: SELECT público, mutações restritas
 
-### CMS
+### ✅ Fase 2 — Core compartilhado (concluída)
+- `packages/core` com: `Segmento`, `isAfSerie()`, `getSegmentoFromSerie()`, `getSerieColumn()`
+- Regras: `escopo_af` → `ano`; todas as outras → `serie`
+- Habilidades: string espaço-separada, sempre `.split(/\s+/).filter(Boolean)`
 
-- manter CRUD funcional para:
-  - curriculo paulista
-  - aprendizagem essencial
-  - escopo-sequencia
-  - matriz prova paulista
-- mover logica sensivel para backend
-- adicionar auth e controle de acesso
-- publicar no Vercel
+### ✅ Fase 3 — Guia público (implementação concluída — 2026-04-01)
+Entregável: `apps/guia` — React 19 + Vite + TypeScript
+- 5 abas: ParaComecar, AprendizagemEssencial, EscopoSequencia, Habilidades, MatrizPP
+- Hooks: `useGuiaData` (carga única), `useNavigation` (History API, F5, popstate)
+- Filtros: segmento / série / componente
+- max-width: 1100px, tokens do design system
 
-## Fase 1 - Mapeamento e banco
+⏳ Pendente para produção:
+- [ ] Configurar env vars no Vercel: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
+- [ ] Validar funcionamento em produção (dados carregam, navegação OK)
 
-1. Identificar o projeto Supabase novo oficial.
-2. Rodar `supabase init` no repo.
-3. Linkar o repo ao projeto novo.
-4. Versionar schema, functions, policies e migrations.
-5. Mapear volumes de dados e tabelas.
+### ✅ Fase 4 — CMS (implementação concluída — 2026-04-01)
+Entregável: `apps/cms` — React 19 + Vite + TypeScript
+- 4 módulos com hash routing (replaceState): EscopoSequencia, AprendizagemEssencial, MatrizPP, CurriculoPaulista
+- ChipInput com validação curriculo/ae
+- Toast system
+- Cascade rename/delete no módulo Currículo Paulista
+- max-width: 1200px
 
-Entregavel:
+⏳ Pendente para produção:
+- [ ] Implementar Vercel Functions em `api/` (service role server-side para mutações)
+- [ ] Configurar env vars no Vercel: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- [ ] Validar que service role NÃO aparece no frontend (DevTools > Network)
 
-- pasta `supabase/` versionada
-- mapa tecnico do banco no repo
+### ⏳ Fase 5 — Backend (Vercel Functions)
+Prioridade: implementar antes do deploy do CMS em produção.
 
-## Fase 2 - Core compartilhado
+Estrutura:
+```
+apps/cms/api/
+├── escopo/
+│   ├── index.ts   ← POST (insert)
+│   └── [id].ts    ← PUT (update), DELETE
+├── ae/
+│   ├── index.ts
+│   └── [id].ts
+├── matriz/
+│   ├── index.ts
+│   └── [id].ts
+└── curriculo/
+    ├── index.ts
+    └── [id].ts    ← cascade rename/delete aqui
+```
 
-1. Extrair regras de negocio do HTML legado.
-2. Criar pacote central para:
-   - normalizacao AF/EM
-   - conversao `ano` vs `serie`
-   - validacao de habilidades
-   - relacoes entre AE, aulas, habilidades e descritores
-   - filtros e contratos
+Cada function usa `SUPABASE_SERVICE_ROLE_KEY` (nunca exposta no frontend).
 
-Entregavel:
+### ⏳ Fase 6 — Paridade e validação
+Checklist mínimo:
+- [ ] Filtros por série/ano funcionam
+- [ ] Filtros por componente funcionam
+- [ ] Filtros por bimestre funcionam
+- [ ] Navegação entre abas (guia)
+- [ ] Navegação entre módulos (cms)
+- [ ] CRUD completo nos 4 módulos do CMS
+- [ ] Validação de habilidades (chips vs curriculo_paulista)
+- [ ] Cascade rename/delete funciona via Vercel Function
+- [ ] Sort natural de AEs (AE1, AE2…AE10)
 
-- `packages/core`
+### ⏳ Fase 7 — Publicação final
+- [ ] Env vars configuradas no Vercel para guia
+- [ ] Env vars configuradas no Vercel para cms (incluindo service role)
+- [ ] Validar guia em produção
+- [ ] Validar cms em produção
+- [ ] Após validação: descontinuar HTMLs estáticos (cms.html, escopo_sequencia.html)
 
-## Fase 3 - Guia publico
+---
 
-1. Criar app React do guia.
-2. Reproduzir as 5 abas.
-3. Reproduzir hash e navegacao cruzada onde fizer sentido.
-4. Trocar cargas gigantes por queries pequenas e agregadas.
-5. Publicar no Vercel.
+## Decisões arquiteturais fixadas
 
-Entregavel:
+| Decisão | Escolha | Motivo |
+|---------|---------|--------|
+| Mutações CMS | Vercel Functions | Service role nunca no frontend |
+| Leitura guia | Frontend direto (anon key) | Dados públicos, RLS SELECT configurado |
+| Schema | guia_priorizado | Isolamento do schema público |
+| Auth CMS | Sem auth (v1) | Fase 1: funcional antes de seguro |
+| Design System | @jeffersonvianna-dev/design-system | Consistência visual cross-project |
 
-- `apps/guia`
+## Regras críticas (não esquecer)
 
-## Fase 4 - CMS
-
-1. Criar app React do CMS.
-2. Reproduzir os 4 modulos.
-3. Mover escrita e validacao para backend.
-4. Implementar auth e autorizacao.
-5. Publicar no Vercel.
-
-Entregavel:
-
-- `apps/cms`
-
-## Fase 5 - Backend
-
-1. Criar camada de backend para:
-   - escrita segura
-   - validacoes
-   - cascade rename/delete de habilidades
-   - auditoria
-2. Escolher entre:
-   - Vercel Functions
-   - app Node dedicada
-
-Recomendacao inicial:
-
-- comecar com Vercel Functions
-
-## Fase 6 - Paridade
-
-Checklist minimo:
-
-- filtros por serie/ano
-- filtros por componente
-- filtros por bimestre
-- navegacao entre abas
-- navegacao cruzada entre escopo, AE, matriz e habilidades
-- CRUD do CMS
-- validacao de habilidades
-- cascade rename/delete
-
-## Fase 7 - Publicacao final
-
-1. Configurar variaveis no Vercel.
-2. Publicar o guia.
-3. Publicar o CMS.
-4. Validar os dois ambientes.
-5. So depois descontinuar a versao HTML antiga.
-
-## Extras recomendados
-
-- auditoria de alteracoes no CMS
-- `created_at`, `updated_at`, `updated_by`
-- logs e observabilidade
-- seeds e scripts reprodutiveis
-- design system compartilhado
-
-## Dependencias externas para seguir
-
-Precisamos confirmar:
-
-1. qual e o URL ou `project-ref` do Supabase novo oficial
-2. qual estrategia de login o CMS vai usar
-3. quais nomes ou dominios voce quer no Vercel para:
-   - guia publico
-   - cms
+1. `escopo_af` usa coluna `ano` — TODAS as outras usam `serie`
+2. Habilidades: sempre `.split(/\s+/).filter(Boolean)`
+3. AE sort: `localeCompare(b, undefined, { numeric: true })`
+4. Segmento no CP: incluir em INSERT **e** UPDATE
+5. Cascade rename: propagar para escopo_af/em + ae_detalhes_af/em
+6. ChipInput Matriz PP: reinicializar ao mudar série ou componente

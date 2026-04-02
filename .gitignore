@@ -9,3 +9,5 @@ dist/
 .idea
 .vscode/*
 !.vscode/extensions.json
+
+.vercel

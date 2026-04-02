@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { db } from '../supabase'
 import { toast } from '../utils/toast'
+import { apiFetch } from '../utils/api'
 import { ChipInput } from '../components/ChipInput'
 import {
   ALL_SERIES, BIM_OPTIONS, compsFor, isAF, escopoTbl, serieCol,
@@ -84,9 +85,13 @@ export function EscopoSequencia() {
   async function deleteRow(row: EscopoRow) {
     const label = `Aula ${row.aula} — ${row.titulo}`
     if (!confirm(`Excluir ${label}?`)) return
-    const { error } = await db.from(escopoTbl(serie)).delete().eq('id', row.id)
-    if (error) toast('Erro ao excluir.', 'err')
-    else { toast('Aula excluída.'); loadData() }
+    try {
+      await apiFetch(`/api/escopo/${row.id}?serie=${encodeURIComponent(serie)}`, { method: 'DELETE' })
+      toast('Aula excluída.')
+      loadData()
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Erro ao excluir.', 'err')
+    }
   }
 
   async function validateHab(hab: string): Promise<boolean> {
@@ -103,7 +108,6 @@ export function EscopoSequencia() {
 
     const tbl = escopoTbl(fSerie)
     const col = serieCol(fSerie)
-    // Verificar unicidade de aula por série+comp+bimestre
     let q = db.from(tbl).select('id')
       .eq(col, fSerie).eq('componente', fComp).eq('aula', parseInt(aula))
     if (bim) q = q.eq('bimestre', bim)
@@ -112,8 +116,8 @@ export function EscopoSequencia() {
       toast(`Aula ${aula} já existe para ${fSerie}/${fComp}/${bim || 'sem bimestre'}.`, 'err'); return
     }
 
-    const row = {
-      [col]: fSerie, componente: fComp,
+    const body = {
+      serie: fSerie, componente: fComp,
       bimestre: bim || null, aula: parseInt(aula),
       titulo: form.titulo, unidade_tematica: form.ut || null,
       objeto: form.obj || null, conteudo: form.conteudo || null,
@@ -123,12 +127,18 @@ export function EscopoSequencia() {
     }
 
     setSaving(true)
-    if (editId) {
-      const { error } = await db.from(tbl).update(row).eq('id', editId)
-      if (error) { toast('Erro ao atualizar.', 'err') } else { toast('Aula atualizada.'); setShowModal(false); loadData() }
-    } else {
-      const { error } = await db.from(tbl).insert(row)
-      if (error) { toast('Erro ao criar.', 'err') } else { toast('Aula criada.'); setShowModal(false); loadData() }
+    try {
+      if (editId) {
+        await apiFetch(`/api/escopo/${editId}`, { method: 'PATCH', body: JSON.stringify(body) })
+        toast('Aula atualizada.')
+      } else {
+        await apiFetch('/api/escopo', { method: 'POST', body: JSON.stringify(body) })
+        toast('Aula criada.')
+      }
+      setShowModal(false)
+      loadData()
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Erro ao salvar.', 'err')
     }
     setSaving(false)
   }

@@ -78,13 +78,6 @@ export function Dashboard({ onGo }: Props) {
 
   return (
     <div className="dash-root">
-      {/* Hero */}
-      <div className="dash-hero">
-        <div className="dash-hero-inner">
-          <div className="dash-hero-icon">GP</div>
-        </div>
-      </div>
-
       {/* Cards */}
       <div className="dash-content">
         <p className="dash-section-label">Módulos de Conteúdo</p>

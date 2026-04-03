@@ -35,8 +35,9 @@ const EMPTY_FORM: FormData = {
 }
 
 export function EscopoSequencia() {
-  const [serie, setSerie] = useState('')
-  const [comp, setComp]   = useState('')
+  const [serie, setSerie] = useState('6º Ano')
+  const [comp, setComp]   = useState('Matemática')
+  const [bim,  setBim]    = useState('')
   const [rows, setRows]   = useState<EscopoRow[]>([])
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
@@ -51,19 +52,24 @@ export function EscopoSequencia() {
     if (!serie) return
     setLoading(true)
     const tbl = escopoTbl(serie)
-    let q = db.from(tbl).select('*').order('bimestre').order('aula')
+    const col = serieCol(serie)
+    let q = db.from(tbl).select('*').eq(col, serie)
     if (comp) q = q.eq('componente', comp)
+    if (bim)  q = q.eq('bimestre', bim)
     const { data, error } = await q
     if (error) { toast('Erro ao carregar dados.', 'err') }
-    else setRows(data || [])
+    else setRows((data || []).sort((a: EscopoRow, b: EscopoRow) => {
+      const bCmp = (a.bimestre || '').localeCompare(b.bimestre || '')
+      return bCmp !== 0 ? bCmp : a.aula - b.aula
+    }))
     setLoading(false)
-  }, [serie, comp])
+  }, [serie, comp, bim])
 
   useEffect(() => { loadData() }, [loadData])
 
   function openNew() {
     setEditId(null)
-    setForm({ ...EMPTY_FORM, serie, comp })
+    setForm({ ...EMPTY_FORM, serie, comp, bim: BIM_OPTIONS[0] })
     setHabs([])
     setShowModal(true)
   }
@@ -102,7 +108,7 @@ export function EscopoSequencia() {
 
   async function save() {
     const { serie: fSerie, comp: fComp, bim, aula, titulo } = form
-    if (!fSerie || !fComp || !aula || !titulo) { toast('Preencha os campos obrigatórios (*).', 'err'); return }
+    if (!fSerie || !fComp || !bim || !aula || !titulo) { toast('Preencha os campos obrigatórios (*).', 'err'); return }
     if (!/^\d+$/.test(aula) || parseInt(aula) < 1) { toast('Nº Aula deve ser um número natural (1, 2, 3…).', 'err'); return }
     if (habs.length === 0) { toast('Informe pelo menos uma Habilidade (*).', 'err'); return }
 
@@ -153,16 +159,21 @@ export function EscopoSequencia() {
       <div className="cms-filtros">
         <div className="c-filtro-group">
           <label>Série *</label>
-          <select value={serie} onChange={e => { setSerie(e.target.value); setComp('') }}>
-            <option value="">Selecione...</option>
+          <select value={serie} onChange={e => { const s = e.target.value; setSerie(s); setComp(c => compsFor(s).includes(c) ? c : (compsFor(s)[0] || '')) }}>
             {ALL_SERIES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
         <div className="c-filtro-group">
           <label>Componente</label>
           <select value={comp} onChange={e => setComp(e.target.value)} disabled={!serie}>
-            <option value="">Todos</option>
             {comps.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div className="c-filtro-group">
+          <label>Bimestre</label>
+          <select value={bim} onChange={e => setBim(e.target.value)} disabled={!serie}>
+            <option value="">Todos</option>
+            {BIM_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
           </select>
         </div>
         {serie && (
@@ -229,7 +240,6 @@ export function EscopoSequencia() {
                 <label className="form-label">Série *</label>
                 <select className="form-select" value={form.serie}
                   onChange={e => { set('serie', e.target.value); set('comp', '') }}>
-                  <option value="">Selecione...</option>
                   {ALL_SERIES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
@@ -237,14 +247,12 @@ export function EscopoSequencia() {
                 <label className="form-label">Componente *</label>
                 <select className="form-select" value={form.comp} onChange={e => set('comp', e.target.value)}
                   disabled={!form.serie}>
-                  <option value="">Selecione...</option>
                   {compsFor(form.serie).map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">Bimestre</label>
+                <label className="form-label">Bimestre *</label>
                 <select className="form-select" value={form.bim} onChange={e => set('bim', e.target.value)}>
-                  <option value="">Sem bimestre</option>
                   {BIM_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
                 </select>
               </div>
@@ -261,7 +269,7 @@ export function EscopoSequencia() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Habilidades * (validado vs Currículo Paulista)</label>
+              <label className="form-label">Habilidades *</label>
               <ChipInput value={habs} onChange={setHabs} validate={validateHab} />
             </div>
 

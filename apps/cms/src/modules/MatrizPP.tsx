@@ -3,7 +3,7 @@ import { db } from '../supabase'
 import { toast } from '../utils/toast'
 import { apiFetch } from '../utils/api'
 import { ChipInput } from '../components/ChipInput'
-import { ALL_SERIES, BIM_OPTIONS, compsFor, mdeTbl, aeTbl, aeNatSort } from '../types'
+import { ALL_SERIES, compsFor, mdeTbl, aeTbl, aeNatSort } from '../types'
 
 interface MdeRow {
   id: number; serie: string; componente: string; ae: string
@@ -11,15 +11,15 @@ interface MdeRow {
 }
 
 interface FormData {
-  serie: string; comp: string; bim: string; grupo: string; descritor: string
+  serie: string; comp: string; grupo: string; descritor: string
 }
 
-const EMPTY: FormData = { serie: '', comp: '', bim: '', grupo: '', descritor: '' }
+const EMPTY: FormData = { serie: '', comp: '', grupo: '', descritor: '' }
 const GRUPOS = ['Grupo 1','Grupo 2','Grupo 3']
 
 export function MatrizPP() {
-  const [serie, setSerie]   = useState('')
-  const [comp,  setComp]    = useState('')
+  const [serie, setSerie]   = useState('6º Ano')
+  const [comp,  setComp]    = useState('Matemática')
   const [rows,  setRows]    = useState<MdeRow[]>([])
   const [selAE, setSelAE]   = useState('')
   const [loading,   setLoading]   = useState(false)
@@ -34,7 +34,7 @@ export function MatrizPP() {
   const loadData = useCallback(async () => {
     if (!serie) return
     setLoading(true)
-    let q = db.from(mdeTbl(serie)).select('*')
+    let q = db.from(mdeTbl(serie)).select('*').eq('serie', serie)
     if (comp) q = q.eq('componente', comp)
     const { data, error } = await q
     if (error) toast('Erro ao carregar.', 'err')
@@ -52,7 +52,9 @@ export function MatrizPP() {
   const effectiveAE = selAE && aes.includes(selAE) ? selAE : (aes[0] || '')
 
   const filteredRows = useMemo(() =>
-    rows.filter(r => r.ae === effectiveAE),
+    rows
+      .filter(r => r.ae === effectiveAE)
+      .sort((a, b) => a.grupo.localeCompare(b.grupo)),
     [rows, effectiveAE]
   )
 
@@ -69,7 +71,7 @@ export function MatrizPP() {
 
   function openEdit(row: MdeRow) {
     setEditId(row.id)
-    setForm({ serie: row.serie, comp: row.componente, bim: row.bimestre || '', grupo: row.grupo, descritor: row.descritor })
+    setForm({ serie: row.serie, comp: row.componente, grupo: row.grupo, descritor: row.descritor })
     setAeChip(row.ae ? [row.ae] : [])
     setShowModal(true)
   }
@@ -86,13 +88,13 @@ export function MatrizPP() {
   }
 
   async function save() {
-    const { serie: s, comp: c, bim, grupo, descritor } = form
+    const { serie: s, comp: c, grupo, descritor } = form
     if (!s || !c || !grupo || !descritor) { toast('Preencha os campos obrigatórios (*).', 'err'); return }
     if (aeChip.length === 0) { toast('Selecione uma AE (*).', 'err'); return }
 
     const body = {
       serie: s, componente: c, ae: aeChip[0],
-      bimestre: bim || null, grupo, descritor,
+      grupo, descritor,
     }
     setSaving(true)
     try {
@@ -120,15 +122,13 @@ export function MatrizPP() {
       <div className="cms-filtros">
         <div className="c-filtro-group">
           <label>Série *</label>
-          <select value={serie} onChange={e => { setSerie(e.target.value); setComp('') }}>
-            <option value="">Selecione...</option>
+          <select value={serie} onChange={e => { const s = e.target.value; setSerie(s); setComp(c => compsFor(s).includes(c) ? c : (compsFor(s)[0] || '')) }}>
             {ALL_SERIES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
         <div className="c-filtro-group">
           <label>Componente</label>
           <select value={comp} onChange={e => setComp(e.target.value)} disabled={!serie}>
-            <option value="">Todos</option>
             {comps.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
@@ -143,7 +143,7 @@ export function MatrizPP() {
             {aes.length > 0 && (
               <div style={{ marginBottom: 20 }}>
                 <div className="c-section-h">Aprendizagens Essenciais</div>
-                <div className="hab-grid">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 8 }}>
                   {aes.map(ae => {
                     const cnt = rows.filter(r => r.ae === ae).length
                     return (
@@ -161,12 +161,16 @@ export function MatrizPP() {
             <div className="cms-status">{loading ? 'Carregando...' : `${filteredRows.length} descritor(es)`}</div>
             <div className="cms-table-wrap">
               <table className="cms-table">
-                <thead><tr><th>AE</th><th>Bim.</th><th>Grupo</th><th>Descritor</th><th></th></tr></thead>
+                <thead><tr>
+                  <th style={{ width: 60 }}>AE</th>
+                  <th style={{ width: 90 }}>Grupo</th>
+                  <th>Descritor</th>
+                  <th style={{ width: 72 }}></th>
+                </tr></thead>
                 <tbody>
                   {filteredRows.map(row => (
                     <tr key={row.id}>
                       <td><span className="c-ae-badge">{row.ae}</span></td>
-                      <td>{row.bimestre || '—'}</td>
                       <td style={{ whiteSpace: 'nowrap' }}>{row.grupo}</td>
                       <td style={{ maxWidth: 300, fontSize: '.82rem' }}>{row.descritor}</td>
                       <td style={{ whiteSpace: 'nowrap' }}>
@@ -194,28 +198,18 @@ export function MatrizPP() {
               <div className="form-group">
                 <label className="form-label">Série *</label>
                 <select className="form-select" value={form.serie} onChange={e => handleFormSerie(e.target.value)}>
-                  <option value="">Selecione...</option>
                   {ALL_SERIES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
               <div className="form-group">
                 <label className="form-label">Componente *</label>
                 <select className="form-select" value={form.comp} onChange={e => handleFormComp(e.target.value)} disabled={!form.serie}>
-                  <option value="">Selecione...</option>
                   {compsFor(form.serie).map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Bimestre</label>
-                <select className="form-select" value={form.bim} onChange={e => set('bim', e.target.value)}>
-                  <option value="">Sem bimestre</option>
-                  {BIM_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
                 </select>
               </div>
               <div className="form-group">
                 <label className="form-label">Grupo *</label>
                 <select className="form-select" value={form.grupo} onChange={e => set('grupo', e.target.value)}>
-                  <option value="">Selecione...</option>
                   {GRUPOS.map(g => <option key={g} value={g}>{g}</option>)}
                 </select>
               </div>

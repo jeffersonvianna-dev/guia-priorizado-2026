@@ -18,8 +18,8 @@ interface FormData {
 const EMPTY: FormData = { serie: '', comp: '', bim: '', ae: '', titulo: '' }
 
 export function AprendizagemEssencial() {
-  const [serie, setSerie] = useState('')
-  const [comp,  setComp]  = useState('')
+  const [serie, setSerie] = useState('6º Ano')
+  const [comp,  setComp]  = useState('Matemática')
   const [bim,   setBim]   = useState('')
   const [rows,  setRows]  = useState<AERow[]>([])
   const [loading,  setLoading]  = useState(false)
@@ -36,7 +36,7 @@ export function AprendizagemEssencial() {
   const loadData = useCallback(async () => {
     if (!serie) return
     setLoading(true)
-    let q = db.from(aeTbl(serie)).select('*').order('ae')
+    let q = db.from(aeTbl(serie)).select('*').eq('serie', serie).order('ae')
     if (comp) q = q.eq('componente', comp)
     if (bim)  q = q.eq('bimestre', bim)
     const { data, error } = await q
@@ -48,7 +48,7 @@ export function AprendizagemEssencial() {
   useEffect(() => { loadData() }, [loadData])
 
   function openNew() {
-    setEditId(null); setForm({ ...EMPTY, serie, comp })
+    setEditId(null); setForm({ ...EMPTY, serie, comp, bim: BIM_OPTIONS[0] })
     setHp([]); setHr([]); setCp([]); setShowModal(true)
   }
 
@@ -79,7 +79,7 @@ export function AprendizagemEssencial() {
 
   async function save() {
     const { serie: s, comp: c, bim: b, ae, titulo } = form
-    if (!s || !c || !ae || !titulo) { toast('Preencha os campos obrigatórios (*).', 'err'); return }
+    if (!s || !c || !b || !ae || !titulo) { toast('Preencha os campos obrigatórios (*).', 'err'); return }
     if (!/^AE\d+$/.test(ae)) { toast('Código AE inválido. Use AE1, AE2…', 'err'); return }
     if (hp.length === 0) { toast('Habilidade Prioritária obrigatória (*).', 'err'); return }
 
@@ -125,15 +125,13 @@ export function AprendizagemEssencial() {
       <div className="cms-filtros">
         <div className="c-filtro-group">
           <label>Série *</label>
-          <select value={serie} onChange={e => { setSerie(e.target.value); setComp('') }}>
-            <option value="">Selecione...</option>
+          <select value={serie} onChange={e => { const s = e.target.value; setSerie(s); setComp(c => compsFor(s).includes(c) ? c : (compsFor(s)[0] || '')) }}>
             {ALL_SERIES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
         <div className="c-filtro-group">
           <label>Componente</label>
           <select value={comp} onChange={e => setComp(e.target.value)} disabled={!serie}>
-            <option value="">Todos</option>
             {comps.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
@@ -156,7 +154,15 @@ export function AprendizagemEssencial() {
         ) : (
           <div className="cms-table-wrap">
             <table className="cms-table">
-              <thead><tr><th>Série</th><th>Comp.</th><th>Bim.</th><th>AE</th><th>Título</th><th>Hab. Prioritária</th><th></th></tr></thead>
+              <thead><tr>
+                <th style={{ width: 90 }}>Série</th>
+                <th style={{ width: 120 }}>Componente</th>
+                <th style={{ width: 110 }}>Bimestre</th>
+                <th style={{ width: 60 }}>AE</th>
+                <th>Título</th>
+                <th style={{ width: 130 }}>Habilidade Prioritária</th>
+                <th style={{ width: 72 }}></th>
+              </tr></thead>
               <tbody>
                 {rows.map(row => (
                   <tr key={row.id}>
@@ -164,7 +170,7 @@ export function AprendizagemEssencial() {
                     <td>{row.bimestre || '—'}</td>
                     <td><span className="c-ae-badge">{row.ae}</span></td>
                     <td style={{ maxWidth: 200 }}>{row.titulo}</td>
-                    <td><span className="c-hab-chip">{row.hab_priorizada}</span></td>
+                    <td><span className="c-hab-chip" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 46, fontFamily: 'monospace', fontSize: '.8rem' }}>{row.hab_priorizada}</span></td>
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <button className="c-btn-icon" onClick={() => openEdit(row)}>✏️</button>
                       <button className="c-btn-icon danger" onClick={() => deleteRow(row)}>🗑️</button>
@@ -190,21 +196,18 @@ export function AprendizagemEssencial() {
                 <label className="form-label">Série *</label>
                 <select className="form-select" value={form.serie}
                   onChange={e => { set('serie', e.target.value); set('comp', '') }}>
-                  <option value="">Selecione...</option>
                   {ALL_SERIES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
               <div className="form-group">
                 <label className="form-label">Componente *</label>
                 <select className="form-select" value={form.comp} onChange={e => set('comp', e.target.value)} disabled={!form.serie}>
-                  <option value="">Selecione...</option>
                   {compsFor(form.serie).map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">Bimestre</label>
+                <label className="form-label">Bimestre *</label>
                 <select className="form-select" value={form.bim} onChange={e => set('bim', e.target.value)}>
-                  <option value="">Sem bimestre</option>
                   {BIM_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
                 </select>
               </div>

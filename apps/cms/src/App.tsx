@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
-import { EscopoSequencia }    from './modules/EscopoSequencia'
+import { EscopoSequencia }      from './modules/EscopoSequencia'
 import { AprendizagemEssencial } from './modules/AprendizagemEssencial'
-import { MatrizPP }           from './modules/MatrizPP'
-import { CurriculoPaulista }  from './modules/CurriculoPaulista'
-import { apiFetch }           from './utils/api'
-import { toast }              from './utils/toast'
+import { MatrizPP }              from './modules/MatrizPP'
+import { CurriculoPaulista }     from './modules/CurriculoPaulista'
+import { Dashboard }             from './modules/Dashboard'
+import { apiFetch }              from './utils/api'
+import { toast }                 from './utils/toast'
 
-type ModuleId = 'escopo' | 'ae' | 'matriz' | 'cp'
+type ModuleId = 'dashboard' | 'escopo' | 'ae' | 'matriz' | 'cp'
 
 const MODULES: { id: ModuleId; label: string }[] = [
   { id: 'escopo', label: '📅 Escopo-Sequência' },
@@ -15,11 +16,11 @@ const MODULES: { id: ModuleId; label: string }[] = [
   { id: 'cp',     label: '📚 Currículo Paulista' },
 ]
 
-const VALID_MODS: ModuleId[] = ['escopo', 'ae', 'matriz', 'cp']
+const VALID_MODS: ModuleId[] = ['dashboard', 'escopo', 'ae', 'matriz', 'cp']
 
 function hashToMod(hash: string): ModuleId {
   const id = hash.replace('#', '') as ModuleId
-  return VALID_MODS.includes(id) ? id : 'escopo'
+  return VALID_MODS.includes(id) ? id : 'dashboard'
 }
 
 export default function App() {
@@ -112,35 +113,36 @@ export default function App() {
       {/* Header */}
       <header className="cms-header">
         <div className="cms-header-inner">
-          <div className="cms-logo">GP</div>
-          <div>
-            <h1>CMS — Guia Priorizado 2026</h1>
+          <div className="cms-logo" style={{ cursor: 'pointer' }} onClick={() => showModule('dashboard')}>GP</div>
+          <div style={{ cursor: 'pointer' }} onClick={() => showModule('dashboard')}>
+            <h1>Sistema de Gestão do Guia 2026</h1>
             <p>Painel de edição de conteúdo</p>
           </div>
-          <button className="c-btn c-btn-ghost" style={{ marginLeft: 'auto' }} onClick={logout}>
+          <button className="c-btn c-btn-header" style={{ marginLeft: 'auto' }} onClick={logout}>
             Sair
           </button>
         </div>
       </header>
 
       {/* Module tabs */}
-      <div className="mod-tabs">
+      <nav className="cms-tabs-nav">
         {MODULES.map(m => (
           <button
             key={m.id}
-            className={`mod-tab${active === m.id ? ' active' : ''}`}
+            className={`cms-tab-btn${active === m.id ? ' active' : ''}`}
             onClick={() => showModule(m.id)}
           >
             {m.label}
           </button>
         ))}
-      </div>
+      </nav>
 
       {/* Active module */}
-      {active === 'escopo' && <EscopoSequencia />}
-      {active === 'ae'     && <AprendizagemEssencial />}
-      {active === 'matriz' && <MatrizPP />}
-      {active === 'cp'     && <CurriculoPaulista />}
+      {active === 'dashboard' && <Dashboard onGo={id => showModule(id as ModuleId)} />}
+      {active === 'escopo'    && <EscopoSequencia />}
+      {active === 'ae'        && <AprendizagemEssencial />}
+      {active === 'matriz'    && <MatrizPP />}
+      {active === 'cp'        && <CurriculoPaulista />}
     </>
   )
 }

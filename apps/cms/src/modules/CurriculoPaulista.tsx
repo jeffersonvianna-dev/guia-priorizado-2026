@@ -11,9 +11,15 @@ interface CPRow {
 
 const SEGS = ['EFAI','EFAF','EM'] as const
 
+const SERIES_FOR_SEG: Record<string, string[]> = {
+  EFAI: ['1º Ano','2º Ano','3º Ano','4º Ano','5º Ano'],
+  EFAF: ['6º Ano','7º Ano','8º Ano','9º Ano'],
+  EM:   ['1ª Série','2ª Série','3ª Série'],
+}
+
 export function CurriculoPaulista() {
-  const [seg,  setSeg]  = useState('')
-  const [comp, setComp] = useState('')
+  const [seg,  setSeg]  = useState('EFAF')
+  const [comp, setComp] = useState('Matemática')
   const [rows, setRows] = useState<CPRow[]>([])
   const [compsAvailable, setCompsAvailable] = useState<string[]>([])
   const [loading,   setLoading]   = useState(false)
@@ -23,6 +29,14 @@ export function CurriculoPaulista() {
   const [form, setForm] = useState({ id_habilidade: '', componente: '', serie: '', texto: '' })
   const [saving, setSaving] = useState(false)
 
+  const loadComps = useCallback(async () => {
+    let q = db.from('curriculo_paulista').select('componente')
+    if (seg) q = q.eq('segmento', seg)
+    const { data } = await q
+    const uniq = [...new Set((data || []).map((r: { componente: string }) => r.componente))].sort()
+    setCompsAvailable(uniq)
+  }, [seg])
+
   const loadData = useCallback(async () => {
     setLoading(true)
     let q = db.from('curriculo_paulista').select('*').order('componente').order('id_habilidade')
@@ -30,16 +44,14 @@ export function CurriculoPaulista() {
     if (comp) q = q.eq('componente', comp)
     const { data, error } = await q
     if (error) toast('Erro ao carregar.', 'err')
-    else {
-      setRows(data || [])
-      const uniq = [...new Set((data || []).map((r: CPRow) => r.componente))].sort()
-      setCompsAvailable(uniq)
-    }
+    else setRows(data || [])
     setLoading(false)
   }, [seg, comp])
 
+  useEffect(() => { loadComps() }, [loadComps])
   useEffect(() => { loadData() }, [loadData])
   useEffect(() => { setComp('') }, [seg])
+  useEffect(() => { setComp(prev => prev || compsAvailable[0] || '') }, [compsAvailable])
 
   function openNew() {
     setEditId(null); setOldCod('')
@@ -127,7 +139,6 @@ export function CurriculoPaulista() {
         <div className="c-filtro-group">
           <label>Componente</label>
           <select value={comp} onChange={e => setComp(e.target.value)}>
-            <option value="">Todos</option>
             {compsAvailable.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
@@ -138,7 +149,14 @@ export function CurriculoPaulista() {
         <div className="cms-status">{loading ? 'Carregando...' : `${rows.length} habilidade(s)`}</div>
         <div className="cms-table-wrap">
           <table className="cms-table">
-            <thead><tr><th>Código</th><th>Segmento</th><th>Componente</th><th>Série</th><th>Texto</th><th></th></tr></thead>
+            <thead><tr>
+              <th style={{ width: 130 }}>Código</th>
+              <th style={{ width: 80 }}>Segmento</th>
+              <th style={{ width: 130 }}>Componente</th>
+              <th style={{ width: 90 }}>Série</th>
+              <th>Texto</th>
+              <th style={{ width: 72 }}></th>
+            </tr></thead>
             <tbody>
               {rows.map(row => (
                 <tr key={row.id}>
@@ -146,7 +164,7 @@ export function CurriculoPaulista() {
                   <td>{row.segmento}</td>
                   <td>{row.componente}</td>
                   <td>{row.serie}</td>
-                  <td style={{ maxWidth: 300, fontSize: '.82rem' }}>{row.texto?.substring(0, 80)}{row.texto?.length > 80 ? '…' : ''}</td>
+                  <td style={{ fontSize: '.82rem' }}>{row.texto?.substring(0, 100)}{row.texto?.length > 100 ? '…' : ''}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     <button className="c-btn-icon" onClick={() => openEdit(row)}>✏️</button>
                     <button className="c-btn-icon danger" onClick={() => deleteRow(row)}>🗑️</button>
@@ -168,7 +186,7 @@ export function CurriculoPaulista() {
 
             <div className="form-grid-2">
               <div className="form-group">
-                <label className="form-label">Código BNCC * (ex: EF06MA01)</label>
+                <label className="form-label">Código da Habilidade * (ex: EF06MA01)</label>
                 <input className="form-input" style={{ fontFamily: 'monospace' }}
                   value={form.id_habilidade}
                   onChange={e => set('id_habilidade', e.target.value.toUpperCase())}
@@ -177,14 +195,15 @@ export function CurriculoPaulista() {
               </div>
               <div className="form-group">
                 <label className="form-label">Componente *</label>
-                <input className="form-input" value={form.componente}
-                  onChange={e => set('componente', e.target.value)} />
+                <select className="form-select" value={form.componente} onChange={e => set('componente', e.target.value)}>
+                  {compsAvailable.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
               <div className="form-group" style={{ gridColumn: '1/-1' }}>
-                <label className="form-label">Série</label>
-                <input className="form-input" value={form.serie}
-                  onChange={e => set('serie', e.target.value)}
-                  placeholder="ex: 6º Ano" />
+                <label className="form-label">Série *</label>
+                <select className="form-select" value={form.serie} onChange={e => set('serie', e.target.value)}>
+                  {(SERIES_FOR_SEG[seg] || []).map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
               </div>
             </div>
             <div className="form-group">

@@ -131,62 +131,65 @@ export function EscopoSequencia({
 
     const seriesArr = sortSeries([...pdfSeries])
     const bimsArr   = BIM_ORDER.filter(b => pdfBims.has(b))
-
-    const rows = allEscopo
-      .filter(r => pdfSeries.has(r.serie) && r.componente === pdfComp && pdfBims.has(r.bimestre))
-      .sort((a, b) => {
-        const sA = seriesArr.indexOf(a.serie), sB = seriesArr.indexOf(b.serie)
-        if (sA !== sB) return sA - sB
-        const bA = BIM_ORDER.indexOf(a.bimestre), bB = BIM_ORDER.indexOf(b.bimestre)
-        if (bA !== bB) return bA - bB
-        return a.aula - b.aula
-      })
+    const bimLabel  = bimsArr.length === 4 ? 'Todos os Bimestres' : bimsArr.join(', ')
 
     const filename = seriesArr.length === 1
       ? `Escopo-Sequência 2026 - ${pdfComp} - ${seriesArr[0]}`
       : `Escopo-Sequência 2026 - ${pdfComp}`
 
-    const bimLabel = bimsArr.length === 4 ? 'Todos os Bimestres' : bimsArr.join(', ')
-    const serieLabel = seriesArr.join(' · ')
+    // Gera um bloco por série, cada um com nova página
+    const blocosHtml = seriesArr.map((s, idx) => {
+      const rowsSerie = allEscopo
+        .filter(r => r.serie === s && r.componente === pdfComp && pdfBims.has(r.bimestre))
+        .sort((a, b) => {
+          const bA = BIM_ORDER.indexOf(a.bimestre), bB = BIM_ORDER.indexOf(b.bimestre)
+          return bA !== bB ? bA - bB : a.aula - b.aula
+        })
 
-    const rowsHtml = rows.map(a => {
-      const aeCode = (a.aprendizagem_essencial || '').match(/^AE\d+/)?.[0] || ''
-      const habs = getHabs(a.habilidades)
-      const tarefa = hasTarefa(a)
-      return `<tr>
-        <td>${a.serie}</td>
-        <td>${a.bimestre}</td>
-        <td>${a.aula}</td>
-        <td>${a.titulo}${tarefa ? ' <span class="tag-tarefa">📋 Tarefa</span>' : ''}</td>
-        <td>${aeCode || '—'}</td>
-        <td class="habs">${habs.join(' · ')}</td>
-      </tr>`
+      const rowsHtml = rowsSerie.map(a => {
+        const aeCode = (a.aprendizagem_essencial || '').match(/^AE\d+/)?.[0] || ''
+        const habs = getHabs(a.habilidades)
+        const tarefa = hasTarefa(a)
+        return `<tr>
+          <td>${a.bimestre}</td>
+          <td>${a.aula}</td>
+          <td>${a.titulo}${tarefa ? ' <span class="tag-tarefa">📋 Tarefa</span>' : ''}</td>
+          <td>${aeCode || '—'}</td>
+          <td class="habs">${habs.join(' · ')}</td>
+        </tr>`
+      }).join('')
+
+      return `<div class="${idx > 0 ? 'page-break' : ''}">
+        <h1>${pdfComp} — ${s}</h1>
+        <div class="sub">${bimLabel} &nbsp;·&nbsp; ${rowsSerie.length} aula(s)</div>
+        <table>
+          <thead><tr>
+            <th style="width:110px">Bimestre</th>
+            <th style="width:44px">Aula</th>
+            <th>Título</th>
+            <th style="width:44px">AE</th>
+            <th>Habilidades</th>
+          </tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>`
     }).join('')
 
     const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
       <title>${filename}</title><style>
       body{font-family:'Segoe UI',sans-serif;color:#1a1f36;margin:36px;font-size:13px}
       h1{font-size:17px;margin:0 0 4px;color:#005BAC}
-      .sub{font-size:12px;color:#6b7280;margin-bottom:24px}
-      table{width:100%;border-collapse:collapse}
+      .sub{font-size:12px;color:#6b7280;margin-bottom:20px}
+      table{width:100%;border-collapse:collapse;margin-bottom:16px}
       th{background:#005BAC;color:#fff;padding:8px 10px;text-align:left;font-size:12px;font-weight:700}
       td{padding:7px 10px;border-bottom:1px solid #e5e7eb;vertical-align:top}
       tr:nth-child(even) td{background:#f8faff}
       .habs{font-size:11px;color:#4b5563}
       .tag-tarefa{font-size:10px;background:#f5f3ff;border:1px solid #c4b5fd;color:#7c3aed;border-radius:8px;padding:1px 6px;margin-left:6px;white-space:nowrap}
-      @media print{@page{margin:18mm}body{margin:0}}
+      .page-break{page-break-before:always;padding-top:8px}
+      @media print{@page{margin:18mm}body{margin:0}.page-break{page-break-before:always}}
       </style></head><body>
-      <h1>${filename}</h1>
-      <div class="sub">${serieLabel} &nbsp;·&nbsp; ${bimLabel} &nbsp;·&nbsp; ${rows.length} aula(s)</div>
-      <table><thead><tr>
-        <th style="width:72px">Série</th>
-        <th style="width:110px">Bimestre</th>
-        <th style="width:44px">Aula</th>
-        <th>Título</th>
-        <th style="width:44px">AE</th>
-        <th>Habilidades</th>
-      </tr></thead>
-      <tbody>${rowsHtml}</tbody></table>
+      ${blocosHtml}
       </body></html>`
 
     const w = window.open('', '_blank')

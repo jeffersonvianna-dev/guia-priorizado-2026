@@ -16,6 +16,7 @@ export interface CurriculoPayload {
   componente: string;
   id_habilidade: string;
   texto?: string | null;
+  serie?: string | null;
 }
 
 export function normalizeCurriculoPayload(payload: CurriculoPayload) {
@@ -23,6 +24,7 @@ export function normalizeCurriculoPayload(payload: CurriculoPayload) {
   const componente = payload.componente.trim();
   const texto = payload.texto?.trim() || 'preencher habilidade';
   const segmento = getCurriculoSegmentoFromCodigo(id_habilidade);
+  const serie = payload.serie?.trim() ?? '';
 
   if (!componente || !id_habilidade) {
     throw new Error('Componente e código são obrigatórios.');
@@ -37,6 +39,7 @@ export function normalizeCurriculoPayload(payload: CurriculoPayload) {
     id_habilidade,
     texto,
     segmento,
+    serie,
   };
 }
 

@@ -43,6 +43,7 @@ export default async function handler(
         componente: String(body.componente ?? ''),
         id_habilidade: String(body.id_habilidade ?? ''),
         texto: body.texto == null ? null : String(body.texto),
+        serie: body.serie == null ? null : String(body.serie),
       });
 
       return sendJson(response, {

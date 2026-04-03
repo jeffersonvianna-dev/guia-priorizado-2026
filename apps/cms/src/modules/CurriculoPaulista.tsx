@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { db } from '../supabase'
 import { toast } from '../utils/toast'
 import { apiFetch } from '../utils/api'
@@ -52,6 +52,7 @@ export function CurriculoPaulista() {
   const [oldCod,    setOldCod]    = useState('')
   const [form,      setForm]      = useState({ id_habilidade: '', componente: '', serie: '', texto: '' })
   const [saving,    setSaving]    = useState(false)
+  const isMounted = useRef(false)
 
   // Segmento detectado do código no form
   const formSeg = segFromCod(form.id_habilidade) || seg
@@ -89,8 +90,16 @@ export function CurriculoPaulista() {
 
   useEffect(() => { loadComps() }, [loadComps])
   useEffect(() => { loadData()  }, [loadData])
-  useEffect(() => { setComp(''); setSerieFilter('') }, [seg])
-  useEffect(() => { setComp(prev => prev || compsAvailable[0] || '') }, [compsAvailable])
+  useEffect(() => {
+    if (!isMounted.current) { isMounted.current = true; return }
+    setComp(''); setSerieFilter('')
+  }, [seg])
+  useEffect(() => {
+    setComp(prev => {
+      if (prev && compsAvailable.includes(prev)) return prev
+      return compsAvailable.includes('Matemática') ? 'Matemática' : (compsAvailable[0] || '')
+    })
+  }, [compsAvailable])
 
   // Auto-preencher série quando o código muda
   useEffect(() => {

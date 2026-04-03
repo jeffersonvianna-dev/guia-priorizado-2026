@@ -192,12 +192,12 @@ export function EscopoSequencia({
       ${blocosHtml}
       </body></html>`
 
-    const w = window.open('', '_blank')
-    if (!w) { alert('Permita pop-ups para gerar o PDF.'); return }
-    w.document.write(html)
-    w.document.close()
-    w.focus()
-    setTimeout(() => { w.print(); w.close() }, 350)
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const url  = URL.createObjectURL(blob)
+    const w    = window.open(url, '_blank')
+    if (!w) { alert('Permita pop-ups para gerar o PDF.'); URL.revokeObjectURL(url); return }
+    w.addEventListener('load', () => { w.print() })
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
     setShowPdfModal(false)
   }
 

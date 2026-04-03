@@ -131,8 +131,6 @@ export function EscopoSequencia({
             </div>
 
             {semanas.map((semAulas, si) => {
-              const first = semAulas[0].aula
-              const last  = semAulas[semAulas.length - 1].aula
               return (
                 <div key={si}>
                   <div className="c-semana-header">

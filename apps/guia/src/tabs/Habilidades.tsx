@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { type EscopoRow, getHabs, fmtList, aeNatSort, isAfSerie, BIM_ORDER } from '../types'
+import { type EscopoRow, getHabs, fmtList, isAfSerie, BIM_ORDER } from '../types'
 import { Filtros } from '../components/Filtros'
 
 interface Props {
@@ -14,14 +14,6 @@ interface Props {
   onFiltersChange?: (serie: string, comp: string, bim: string) => void
 }
 
-const SEMANAS = 7
-
-function calcSemana(aulaNum: number, allAulas: number[]): number {
-  const sorted = [...new Set(allAulas)].sort((a, b) => a - b)
-  const per = Math.ceil(sorted.length / SEMANAS)
-  const idx = sorted.indexOf(aulaNum)
-  return idx === -1 ? 0 : Math.floor(idx / per) + 1
-}
 
 export function Habilidades({
   escopoAF, escopoEM,
@@ -69,8 +61,6 @@ export function Habilidades({
   const firstHab = habs[0] || ''
   const effectiveHab = selHab && habMap.has(selHab) ? selHab : firstHab
 
-  // Todas as aulas da série+comp+bim para cálculo de semana
-  const allAulaNums = useMemo(() => rows.map(r => r.aula), [rows])
 
   const targetRef = useRef<string>('')
   useEffect(() => {

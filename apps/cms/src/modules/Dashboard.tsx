@@ -84,11 +84,13 @@ export function Dashboard({ onGo }: Props) {
         <div className="dash-grid">
           {MODULES.map(m => (
             <div key={m.id} className="dash-card" onClick={() => onGo(m.id)}>
-              <div className="dash-card-icon" style={{ background: m.color + '18', color: m.color }}>
-                {m.icon}
+              <div className="dash-card-header">
+                <div className="dash-card-icon" style={{ background: m.color + '18', color: m.color }}>
+                  {m.icon}
+                </div>
+                <div className="dash-card-title">{m.label}</div>
               </div>
               <div className="dash-card-body">
-                <div className="dash-card-title">{m.label}</div>
                 <p className="dash-card-desc">{m.desc}</p>
               </div>
               <div className="dash-card-footer">

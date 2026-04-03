@@ -126,6 +126,13 @@ export default function App() {
 
       {/* Module tabs */}
       <nav className="cms-tabs-nav">
+        <button
+          className={`cms-tab-btn${active === 'dashboard' ? ' active' : ''}`}
+          onClick={() => showModule('dashboard')}
+          title="Início"
+        >
+          🏠
+        </button>
         {MODULES.map(m => (
           <button
             key={m.id}

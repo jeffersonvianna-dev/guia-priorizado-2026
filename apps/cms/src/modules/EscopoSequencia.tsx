@@ -22,16 +22,19 @@ interface EscopoRow {
   referencias: string | null
   ano?: string
   serie?: string
+  id_md?: string | null
 }
 
 interface FormData {
   serie: string; comp: string; bim: string; aula: string; titulo: string
   ut: string; obj: string; conteudo: string; objetivos: string; descritivo: string; referencias: string
+  id_md: string
 }
 
 const EMPTY_FORM: FormData = {
   serie: '', comp: '', bim: '', aula: '', titulo: '',
   ut: '', obj: '', conteudo: '', objetivos: '', descritivo: '', referencias: '',
+  id_md: '',
 }
 
 export function EscopoSequencia() {
@@ -83,6 +86,7 @@ export function EscopoSequencia() {
       ut: row.unidade_tematica || '', obj: row.objeto || '',
       conteudo: row.conteudo || '', objetivos: row.objetivos || '',
       descritivo: row.descritivo || '', referencias: row.referencias || '',
+      id_md: row.id_md || '',
     })
     setHabs(row.habilidades ? row.habilidades.split(/\s+/).filter(Boolean) : [])
     setShowModal(true)
@@ -130,6 +134,7 @@ export function EscopoSequencia() {
       objetivos: form.objetivos || null, descritivo: form.descritivo || null,
       referencias: form.referencias || null,
       habilidades: habs.join(' '),
+      id_md: form.id_md || null,
     }
 
     setSaving(true)
@@ -296,6 +301,10 @@ export function EscopoSequencia() {
             <div className="form-group">
               <label className="form-label">Referências</label>
               <textarea className="form-textarea" value={form.referencias} onChange={e => set('referencias', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">ID Material Digital</label>
+              <input className="form-input" style={{ fontFamily: 'monospace' }} value={form.id_md} onChange={e => set('id_md', e.target.value)} placeholder="ex: MD001" />
             </div>
 
             <div className="modal-actions">

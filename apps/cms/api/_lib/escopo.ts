@@ -24,6 +24,7 @@ export interface EscopoPayload {
   descritivo?: string | null;
   referencias?: string | null;
   aprendizagem_essencial?: string | null;
+  id_md?: string | null;
 }
 
 export type EscopoRow = EscopoAfRow | EscopoEmRow;
@@ -63,6 +64,7 @@ export function normalizeEscopoPayload(payload: EscopoPayload) {
     descritivo: payload.descritivo?.trim() || null,
     referencias: payload.referencias?.trim() || null,
     aprendizagem_essencial: payload.aprendizagem_essencial?.trim() || null,
+    id_md: payload.id_md?.trim() || null,
   };
 }
 
@@ -169,6 +171,7 @@ function buildEscopoRow(
     descritivo: payload.descritivo,
     referencias: payload.referencias,
     aprendizagem_essencial: payload.aprendizagem_essencial,
+    id_md: payload.id_md,
   };
 }
 

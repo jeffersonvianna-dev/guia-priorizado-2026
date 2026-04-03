@@ -71,6 +71,7 @@ export default async function handler(
           body.aprendizagem_essencial == null
             ? null
             : String(body.aprendizagem_essencial),
+        id_md: body.id_md == null ? null : String(body.id_md),
       });
 
       return sendJson(

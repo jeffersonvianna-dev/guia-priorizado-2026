@@ -201,8 +201,7 @@ export function EscopoSequencia({
     w.document.open()
     w.document.write(html)
     w.document.close()
-    w.document.title = filename
-    setTimeout(() => w.print(), 400)
+    setTimeout(() => { w.document.title = filename; w.print() }, 400)
     setShowPdfModal(false)
   }
 

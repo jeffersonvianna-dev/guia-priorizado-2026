@@ -96,12 +96,12 @@ export function EscopoSequencia({
   // Séries disponíveis no dataset (para o modal de PDF)
   const availSeries = useMemo(() => sortSeries([...new Set(allEscopo.map(r => r.serie))]), [allEscopo])
 
-  // Componentes disponíveis para as séries selecionadas no modal
+  // Componentes disponíveis: todos os componentes do dataset (independe da seleção de série)
   const pdfAvailComps = useMemo(() => {
     const s = new Set<string>()
-    allEscopo.filter(r => pdfSeries.has(r.serie)).forEach(r => s.add(r.componente))
+    allEscopo.forEach(r => s.add(r.componente))
     return [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'))
-  }, [allEscopo, pdfSeries])
+  }, [allEscopo])
 
   function openPdfModal() {
     setPdfSeries(serie ? new Set([serie]) : new Set())
@@ -114,9 +114,6 @@ export function EscopoSequencia({
     setPdfSeries(prev => {
       const next = new Set(prev)
       next.has(s) ? next.delete(s) : next.add(s)
-      // Adjust pdfComp if it's no longer available
-      const newComps = new Set(allEscopo.filter(r => next.has(r.serie)).map(r => r.componente))
-      if (!newComps.has(pdfComp)) setPdfComp([...newComps][0] || '')
       return next
     })
   }

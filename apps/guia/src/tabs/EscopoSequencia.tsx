@@ -68,7 +68,8 @@ export function EscopoSequencia({
     const totalHabs = new Set(
       aulas.flatMap(r => getHabs(r.habilidades))
     ).size
-    return { totalAulas, totalAEs, totalHabs }
+    const totalTarefas = aulas.filter(r => r.id_md).length
+    return { totalAulas, totalAEs, totalHabs, totalTarefas }
   }, [aulas])
 
   // Abrir primeira aula quando série/comp/bimestre mudam
@@ -121,9 +122,10 @@ export function EscopoSequencia({
             {/* Stats pills */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
               {[
-                { label: 'Aulas',       value: stats.totalAulas, color: 'var(--blue)',   border: 'var(--blue)',          bg: 'var(--blue-light, #e8f0fe)' },
-                { label: 'AEs',         value: stats.totalAEs,   color: 'var(--orange)', border: 'var(--orange-border)', bg: 'var(--orange-light)' },
-                { label: 'Habilidades', value: stats.totalHabs,  color: 'var(--green)',  border: 'var(--green)',         bg: 'var(--green-light, #e6f4ea)' },
+                { label: 'Aulas',       value: stats.totalAulas,    color: 'var(--blue)',   border: 'var(--blue)',          bg: 'var(--blue-light, #e8f0fe)' },
+                { label: 'AEs',         value: stats.totalAEs,      color: 'var(--orange)', border: 'var(--orange-border)', bg: 'var(--orange-light)' },
+                { label: 'Habilidades', value: stats.totalHabs,     color: 'var(--green)',  border: 'var(--green)',         bg: 'var(--green-light, #e6f4ea)' },
+                { label: 'Tarefas',     value: stats.totalTarefas,  color: '#7c3aed',       border: '#c4b5fd',              bg: '#f5f3ff' },
               ].map(s => (
                 <div key={s.label} style={{
                   display: 'flex', alignItems: 'center', gap: 6,
@@ -155,6 +157,13 @@ export function EscopoSequencia({
                         <div className="c-aula-card-header" onClick={() => toggleCard(aula.aula)}>
                           <div className="c-aula-numero">Aula {aula.aula}</div>
                           <div className="c-aula-titulo">{aula.titulo}</div>
+                          {aula.id_md && (
+                            <span title={`Material Digital: ${aula.id_md}`} style={{
+                              fontSize: '.68rem', fontWeight: 700, letterSpacing: '.03em',
+                              color: '#7c3aed', background: '#f5f3ff', border: '1px solid #c4b5fd',
+                              borderRadius: 10, padding: '1px 7px', flexShrink: 0, whiteSpace: 'nowrap',
+                            }}>📋 MD</span>
+                          )}
                           <div className="flex-chips c-aula-habs-preview">
                             {aeCode && (
                               <span className="c-ae-badge nav" style={{ fontSize: '.72rem', padding: '2px 8px' }}

@@ -16,6 +16,7 @@ export interface EscopoAFRow {
   objeto: string | null
   descritivo: string | null
   referencias: string | null
+  id_md: string | null
 }
 
 /** Row de escopo_em (col. série = 'serie') */
@@ -34,6 +35,7 @@ export interface EscopoEMRow {
   objeto: string | null
   descritivo: string | null
   referencias: string | null
+  id_md: string | null
 }
 
 /** Shape unificado para uso nos componentes */
@@ -52,6 +54,7 @@ export interface EscopoRow {
   objeto: string | null
   descritivo: string | null
   referencias: string | null
+  id_md: string | null
   segmento: Segmento
 }
 

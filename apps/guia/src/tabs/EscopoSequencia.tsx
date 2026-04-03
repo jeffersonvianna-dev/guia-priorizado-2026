@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { type EscopoRow, type MdTarefaRow, getHabs, fmtList, isAfSerie } from '../types'
+import { type EscopoRow, type MdTarefaRow, getHabs, fmtList, isAfSerie, BIM_ORDER, sortSeries } from '../types'
 import { Filtros } from '../components/Filtros'
 
 interface Props {
@@ -37,6 +37,10 @@ export function EscopoSequencia({
   const [comp, setComp]   = useState(initialComp)
   const [bim, setBim]     = useState(initialBim)
   const [openCards, setOpenCards] = useState<Set<number>>(new Set())
+  const [showPdfModal, setShowPdfModal] = useState(false)
+  const [pdfSeries, setPdfSeries] = useState<Set<string>>(new Set())
+  const [pdfComp, setPdfComp]     = useState('')
+  const [pdfBims, setPdfBims]     = useState<Set<string>>(new Set(BIM_ORDER))
 
   const allEscopo = useMemo(() => [...escopoAF, ...escopoEM], [escopoAF, escopoEM])
 
@@ -89,22 +93,81 @@ export function EscopoSequencia({
     else setOpenCards(new Set())
   }, [serie, comp, bim])
 
-  function downloadPdf() {
-    const bimLabel = bim || 'Todos os Bimestres'
-    const title = `Escopo-Sequência — ${serie} / ${comp}`
-    const rowsHtml = aulas.map(a => {
+  // Séries disponíveis no dataset (para o modal de PDF)
+  const availSeries = useMemo(() => sortSeries([...new Set(allEscopo.map(r => r.serie))]), [allEscopo])
+
+  // Componentes disponíveis para as séries selecionadas no modal
+  const pdfAvailComps = useMemo(() => {
+    const s = new Set<string>()
+    allEscopo.filter(r => pdfSeries.has(r.serie)).forEach(r => s.add(r.componente))
+    return [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [allEscopo, pdfSeries])
+
+  function openPdfModal() {
+    setPdfSeries(serie ? new Set([serie]) : new Set())
+    setPdfComp(comp || '')
+    setPdfBims(new Set(BIM_ORDER))
+    setShowPdfModal(true)
+  }
+
+  function togglePdfSerie(s: string) {
+    setPdfSeries(prev => {
+      const next = new Set(prev)
+      next.has(s) ? next.delete(s) : next.add(s)
+      // Adjust pdfComp if it's no longer available
+      const newComps = new Set(allEscopo.filter(r => next.has(r.serie)).map(r => r.componente))
+      if (!newComps.has(pdfComp)) setPdfComp([...newComps][0] || '')
+      return next
+    })
+  }
+
+  function togglePdfBim(b: string) {
+    setPdfBims(prev => {
+      const next = new Set(prev)
+      next.has(b) ? next.delete(b) : next.add(b)
+      return next
+    })
+  }
+
+  function generatePdf() {
+    if (!pdfComp || pdfSeries.size === 0 || pdfBims.size === 0) return
+
+    const seriesArr = sortSeries([...pdfSeries])
+    const bimsArr   = BIM_ORDER.filter(b => pdfBims.has(b))
+
+    const rows = allEscopo
+      .filter(r => pdfSeries.has(r.serie) && r.componente === pdfComp && pdfBims.has(r.bimestre))
+      .sort((a, b) => {
+        const sA = seriesArr.indexOf(a.serie), sB = seriesArr.indexOf(b.serie)
+        if (sA !== sB) return sA - sB
+        const bA = BIM_ORDER.indexOf(a.bimestre), bB = BIM_ORDER.indexOf(b.bimestre)
+        if (bA !== bB) return bA - bB
+        return a.aula - b.aula
+      })
+
+    const filename = seriesArr.length === 1
+      ? `Escopo-Sequência 2026 - ${pdfComp} - ${seriesArr[0]}`
+      : `Escopo-Sequência 2026 - ${pdfComp}`
+
+    const bimLabel = bimsArr.length === 4 ? 'Todos os Bimestres' : bimsArr.join(', ')
+    const serieLabel = seriesArr.join(' · ')
+
+    const rowsHtml = rows.map(a => {
       const aeCode = (a.aprendizagem_essencial || '').match(/^AE\d+/)?.[0] || ''
       const habs = getHabs(a.habilidades)
       const tarefa = hasTarefa(a)
       return `<tr>
+        <td>${a.serie}</td>
+        <td>${a.bimestre}</td>
         <td>${a.aula}</td>
         <td>${a.titulo}${tarefa ? ' <span class="tag-tarefa">📋 Tarefa</span>' : ''}</td>
         <td>${aeCode || '—'}</td>
         <td class="habs">${habs.join(' · ')}</td>
       </tr>`
     }).join('')
+
     const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-      <title>${title}</title><style>
+      <title>${filename}</title><style>
       body{font-family:'Segoe UI',sans-serif;color:#1a1f36;margin:36px;font-size:13px}
       h1{font-size:17px;margin:0 0 4px;color:#005BAC}
       .sub{font-size:12px;color:#6b7280;margin-bottom:24px}
@@ -116,17 +179,26 @@ export function EscopoSequencia({
       .tag-tarefa{font-size:10px;background:#f5f3ff;border:1px solid #c4b5fd;color:#7c3aed;border-radius:8px;padding:1px 6px;margin-left:6px;white-space:nowrap}
       @media print{@page{margin:18mm}body{margin:0}}
       </style></head><body>
-      <h1>${title}</h1>
-      <div class="sub">${bimLabel} &nbsp;·&nbsp; ${aulas.length} aula(s) &nbsp;·&nbsp; ${stats.totalHabs} habilidade(s)</div>
-      <table><thead><tr><th style="width:48px">Aula</th><th>Título</th><th style="width:48px">AE</th><th>Habilidades</th></tr></thead>
+      <h1>${filename}</h1>
+      <div class="sub">${serieLabel} &nbsp;·&nbsp; ${bimLabel} &nbsp;·&nbsp; ${rows.length} aula(s)</div>
+      <table><thead><tr>
+        <th style="width:72px">Série</th>
+        <th style="width:110px">Bimestre</th>
+        <th style="width:44px">Aula</th>
+        <th>Título</th>
+        <th style="width:44px">AE</th>
+        <th>Habilidades</th>
+      </tr></thead>
       <tbody>${rowsHtml}</tbody></table>
       </body></html>`
+
     const w = window.open('', '_blank')
     if (!w) { alert('Permita pop-ups para gerar o PDF.'); return }
     w.document.write(html)
     w.document.close()
     w.focus()
     setTimeout(() => { w.print(); w.close() }, 350)
+    setShowPdfModal(false)
   }
 
   function toggleCard(aulaNum: number) {
@@ -187,7 +259,7 @@ export function EscopoSequencia({
                   <span style={{ fontSize: '.8rem', color: 'var(--text-muted)' }}>{s.label}</span>
                 </div>
               ))}
-              <button onClick={downloadPdf} title={`Baixar PDF — ${serie} / ${comp}`} style={{
+              <button onClick={openPdfModal} title="Baixar PDF" style={{
                 marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5,
                 background: 'none', border: '1px solid var(--gray-mid, #dde2ec)',
                 borderRadius: 20, padding: '4px 12px', cursor: 'pointer',
@@ -283,6 +355,86 @@ export function EscopoSequencia({
           </>
         )}
       </div>
+
+      {/* Modal PDF */}
+      {showPdfModal && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowPdfModal(false)}>
+          <div className="modal" style={{ maxWidth: 480 }}>
+            <div className="modal-title">
+              <span>⬇ Exportar PDF</span>
+              <button className="c-btn-icon" onClick={() => setShowPdfModal(false)}>✕</button>
+            </div>
+
+            {/* Série — múltipla */}
+            <div className="form-group" style={{ marginBottom: 16 }}>
+              <label className="form-label" style={{ marginBottom: 8, display: 'block' }}>Série</label>
+              <div className="flex-chips" style={{ gap: 6, flexWrap: 'wrap' }}>
+                {availSeries.map(s => (
+                  <span
+                    key={s}
+                    onClick={() => togglePdfSerie(s)}
+                    style={{
+                      cursor: 'pointer', borderRadius: 20, padding: '4px 12px', fontSize: '.82rem',
+                      fontWeight: 600, border: '1px solid',
+                      background: pdfSeries.has(s) ? 'var(--blue)' : 'transparent',
+                      color: pdfSeries.has(s) ? '#fff' : 'var(--text-muted)',
+                      borderColor: pdfSeries.has(s) ? 'var(--blue)' : 'var(--gray-mid, #dde2ec)',
+                      userSelect: 'none',
+                    }}
+                  >{s}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Componente — único */}
+            <div className="form-group" style={{ marginBottom: 16 }}>
+              <label className="form-label" style={{ marginBottom: 6, display: 'block' }}>Componente</label>
+              <select
+                className="form-select"
+                value={pdfComp}
+                onChange={e => setPdfComp(e.target.value)}
+                disabled={pdfSeries.size === 0}
+                style={{ width: '100%' }}
+              >
+                {pdfAvailComps.length === 0 && <option value="">—</option>}
+                {pdfAvailComps.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
+            {/* Bimestre — múltiplo */}
+            <div className="form-group" style={{ marginBottom: 24 }}>
+              <label className="form-label" style={{ marginBottom: 8, display: 'block' }}>Bimestre</label>
+              <div className="flex-chips" style={{ gap: 6, flexWrap: 'wrap' }}>
+                {BIM_ORDER.map(b => (
+                  <span
+                    key={b}
+                    onClick={() => togglePdfBim(b)}
+                    style={{
+                      cursor: 'pointer', borderRadius: 20, padding: '4px 12px', fontSize: '.82rem',
+                      fontWeight: 600, border: '1px solid',
+                      background: pdfBims.has(b) ? 'var(--orange)' : 'transparent',
+                      color: pdfBims.has(b) ? '#fff' : 'var(--text-muted)',
+                      borderColor: pdfBims.has(b) ? 'var(--orange)' : 'var(--gray-mid, #dde2ec)',
+                      userSelect: 'none',
+                    }}
+                  >{b}</span>
+                ))}
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button className="c-btn c-btn-ghost" onClick={() => setShowPdfModal(false)}>Cancelar</button>
+              <button
+                className="c-btn c-btn-primary"
+                onClick={generatePdf}
+                disabled={pdfSeries.size === 0 || !pdfComp || pdfBims.size === 0}
+              >
+                ⬇ Gerar PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

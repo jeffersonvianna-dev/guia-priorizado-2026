@@ -68,6 +68,22 @@ export function MatrizPP({
     'Grupo 3': 'var(--green)',
   }
 
+  // Título da AE selecionada
+  const aeTitulo = useMemo(() => {
+    if (!effectiveAE) return ''
+    return aeData.find(r => r.serie === serie && r.componente === comp && r.ae === effectiveAE)?.titulo || ''
+  }, [aeData, serie, comp, effectiveAE])
+
+  // Contagem de descritores por AE
+  const descCountByAE = useMemo(() => {
+    if (!serie || !comp) return new Map<string, number>()
+    const map = new Map<string, number>()
+    for (const r of matrizData.filter(r => r.serie === serie && r.componente === comp)) {
+      map.set(r.ae, (map.get(r.ae) || 0) + 1)
+    }
+    return map
+  }, [matrizData, serie, comp])
+
   const placeholder = !serie
     ? { icon: '📝', title: 'Selecione uma série', sub: '' }
     : !comp
@@ -94,22 +110,34 @@ export function MatrizPP({
           <>
             {/* Grid de AEs selecionáveis — apenas código */}
             <div className="c-section-h" style={{ marginBottom: 12 }}>Aprendizagens Essenciais</div>
-            <div className="hab-grid" style={{ marginBottom: 24 }}>
-              {aes.map(ae => (
-                <div
-                  key={ae}
-                  className={`c-hab-box${effectiveAE === ae ? ' selected' : ''}`}
-                  onClick={() => setSelAE(ae)}
-                >
-                  <span className="c-hab-code">{ae}</span>
-                </div>
-              ))}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginBottom: 24 }}>
+              {aes.map(ae => {
+                const count = descCountByAE.get(ae) || 0
+                return (
+                  <div
+                    key={ae}
+                    className={`c-hab-box${effectiveAE === ae ? ' selected' : ''}`}
+                    onClick={() => setSelAE(ae)}
+                  >
+                    <span className="c-hab-code">{ae}</span>
+                    <span className="c-hab-box-meta">{count} descritor{count !== 1 ? 'es' : ''}</span>
+                  </div>
+                )
+              })}
             </div>
 
             {effectiveAE && (
               <>
+                {/* Card título da AE */}
+                {aeTitulo && (
+                  <div className="c-aula-card" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', marginBottom: 16 }}>
+                    <span className="c-ae-badge">{effectiveAE}</span>
+                    <span style={{ fontWeight: 600, fontSize: '.88rem' }}>{aeTitulo}</span>
+                  </div>
+                )}
+
                 {/* Grupos de descritores */}
-                <div className="c-section-h">Descritores — {effectiveAE}</div>
+                <div className="c-section-h">Descritores</div>
                 <div className="grid-3" style={{ marginTop: 12 }}>
                   {GRUPOS.map(grupo => {
                     const descs = descByGrupo.get(grupo) || []

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { type EscopoRow, sortSeries, sortBim, isAfSerie, BIM_ORDER } from '../types'
+import { type EscopoRow, sortSeries, sortBim, BIM_ORDER } from '../types'
 
 interface FiltrosProps {
   escopo: EscopoRow[]          // dados completos (AF + EM)
@@ -7,12 +7,13 @@ interface FiltrosProps {
   comp: string
   bim: string
   showBim?: boolean
+  hideBimTodos?: boolean
   onSerie: (v: string) => void
   onComp:  (v: string) => void
   onBim?:  (v: string) => void
 }
 
-export function Filtros({ escopo, serie, comp, bim, showBim = true, onSerie, onComp, onBim }: FiltrosProps) {
+export function Filtros({ escopo, serie, comp, bim, showBim = true, hideBimTodos = false, onSerie, onComp, onBim }: FiltrosProps) {
   const series = useMemo(() => {
     const all = [...escopo.map(r => r.serie)]
     return sortSeries(all)
@@ -32,33 +33,21 @@ export function Filtros({ escopo, serie, comp, bim, showBim = true, onSerie, onC
     return sortBim(raw)
   }, [escopo, serie, comp])
 
-  function handleSerie(v: string) {
-    onSerie(v)
-    onComp('')
-    if (onBim) onBim('')
-  }
-
-  function handleComp(v: string) {
-    onComp(v)
-    if (onBim) onBim('')
-  }
-
-  const isAfFilter = serie ? isAfSerie(serie) : false
-  const segLabel = serie ? (isAfFilter ? 'Anos Finais' : 'Ensino Médio') : ''
+  // Cascade resets are handled by the parent's onSerie/onComp callbacks
+  function handleSerie(v: string) { onSerie(v) }
+  function handleComp(v: string)  { onComp(v) }
 
   return (
     <div className="c-filtros">
       <div className="c-filtro-group">
-        <label>Série / Ano{segLabel ? ` · ${segLabel}` : ''}</label>
+        <label>Série / Ano</label>
         <select value={serie} onChange={e => handleSerie(e.target.value)}>
-          <option value="">Selecione...</option>
           {series.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
       <div className="c-filtro-group">
         <label>Componente Curricular</label>
         <select value={comp} onChange={e => handleComp(e.target.value)} disabled={!serie}>
-          <option value="">Selecione...</option>
           {comps.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
@@ -66,7 +55,7 @@ export function Filtros({ escopo, serie, comp, bim, showBim = true, onSerie, onC
         <div className="c-filtro-group">
           <label>Bimestre</label>
           <select value={bim} onChange={e => onBim(e.target.value)} disabled={!comp}>
-            <option value="">Todos</option>
+            {!hideBimTodos && <option value="">Todos</option>}
             {BIM_ORDER.filter(b => bims.includes(b)).map(b => (
               <option key={b} value={b}>{b}</option>
             ))}

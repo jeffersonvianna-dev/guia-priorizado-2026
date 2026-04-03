@@ -61,7 +61,9 @@ export function Habilidades({
     return map
   }, [rows])
 
-  const habs = useMemo(() => [...habMap.keys()].sort(), [habMap])
+  const habs = useMemo(() =>
+    [...habMap.keys()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+  , [habMap])
 
   // Selecionar primeira hab automaticamente
   const firstHab = habs[0] || ''
@@ -111,7 +113,7 @@ export function Habilidades({
       if (!map.has(b)) map.set(b, [])
       map.get(b)!.push(a)
     }
-    return BIM_ORDER.map(b => ({ bim: b, aulas: map.get(b) || [] })).filter(g => g.aulas.length > 0)
+    return BIM_ORDER.map(b => ({ bim: b, aulas: (map.get(b) || []).sort((a, b) => a.aula - b.aula) })).filter(g => g.aulas.length > 0)
   }, [aulasSel])
 
   return (
@@ -131,15 +133,19 @@ export function Habilidades({
           <>
             {/* Grid de habilidades — apenas código, sem meta */}
             <div className="hab-grid">
-              {habs.map(h => (
-                <div
-                  key={h}
-                  className={`c-hab-box${effectiveHab === h ? ' selected' : ''}`}
-                  onClick={() => setSelHab(h)}
-                >
-                  <span className="c-hab-code">{h}</span>
-                </div>
-              ))}
+              {habs.map(h => {
+                const aulaCount = habMap.get(h)?.aulas.length ?? 0
+                return (
+                  <div
+                    key={h}
+                    className={`c-hab-box${effectiveHab === h ? ' selected' : ''}`}
+                    onClick={() => setSelHab(h)}
+                  >
+                    <span className="c-hab-code">{h}</span>
+                    <span className="c-hab-box-meta">{aulaCount} aula{aulaCount !== 1 ? 's' : ''}</span>
+                  </div>
+                )
+              })}
             </div>
 
             {effectiveHab && (
@@ -150,29 +156,30 @@ export function Habilidades({
                     <div style={{ marginBottom: 8 }}><span className="c-bim-chip">{b}</span></div>
                     {aulas.map(aula => {
                       const open = openCards.has(aula.aula)
-                      const semana = calcSemana(aula.aula, allAulaNums)
-                      const aeCodes = (aula.aprendizagem_essencial || '').split(/\s+/).filter(Boolean)
+                      const aeCode = (aula.aprendizagem_essencial || '').match(/^AE\d+/)?.[0] || ''
                       const conteudoItems = fmtList(aula.conteudo)
                       const objItems = fmtList(aula.objetivos)
                       return (
                         <div key={aula.id} className={`c-aula-card${open ? ' open' : ''}`} style={{ marginBottom: 8 }}>
                           <div className="c-aula-card-header" onClick={() => toggleCard(aula.aula)}>
-                            <div className="c-aula-numero">{aula.aula}</div>
-                            <div className="c-aula-titulo">
-                              <div>{aula.titulo}</div>
-                              {!open && (
-                                <div className="flex-chips" style={{ marginTop: 4 }}>
-                                  {semana > 0 && <span className="c-semana-chip">Semana {semana}</span>}
-                                  <span
-                                    className="c-hab-chip"
-                                    onClick={e => { e.stopPropagation(); onGoToAula(serie, comp, b, aula.aula) }}
-                                    title="Ir para Escopo-Sequência"
-                                  >
-                                    Ver na Sequência
-                                  </span>
-                                </div>
-                              )}
+                            <div
+                              className="c-aula-numero"
+                              onClick={e => { e.stopPropagation(); onGoToAula(serie, comp, b, aula.aula) }}
+                              title="Ir para Escopo-Sequência"
+                              style={{ cursor: 'pointer' }}
+                            >
+                              Aula {aula.aula}
                             </div>
+                            <div className="c-aula-titulo">{aula.titulo}</div>
+                            {aeCode && (
+                              <span
+                                className="c-ae-badge nav"
+                                style={{ fontSize: '.72rem', padding: '2px 8px', flexShrink: 0 }}
+                                onClick={e => { e.stopPropagation(); onGoToAE(serie, comp, aeCode) }}
+                              >
+                                {aeCode}
+                              </span>
+                            )}
                             <span className="c-expand-icon">▾</span>
                           </div>
                           {open && (
@@ -200,29 +207,6 @@ export function Habilidades({
                                     </div>
                                   </div>
                                 )}
-                                {aeCodes.length > 0 && (
-                                  <div className="c-campo">
-                                    <div className="c-campo-label">AE</div>
-                                    <div className="flex-chips" style={{ marginTop: 4 }}>
-                                      {aeCodes.sort((a, b) => aeNatSort(a, b)).map(ae => (
-                                        <span key={ae} className="c-ae-badge nav" onClick={() => onGoToAE(serie, comp, ae)}>{ae}</span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                                <div className="c-campo">
-                                  <div className="c-campo-label">Ir para</div>
-                                  <div className="flex-chips" style={{ marginTop: 4 }}>
-                                    {semana > 0 && <span className="c-semana-chip">Semana {semana}</span>}
-                                    <span
-                                      className="c-hab-chip"
-                                      onClick={() => onGoToAula(serie, comp, b, aula.aula)}
-                                      title="Ir para Escopo-Sequência"
-                                    >
-                                      Ver na Sequência
-                                    </span>
-                                  </div>
-                                </div>
                               </div>
                             </div>
                           )}

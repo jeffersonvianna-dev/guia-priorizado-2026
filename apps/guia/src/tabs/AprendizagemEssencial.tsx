@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { type AeDetalhesRow, type EscopoRow, BIM_ORDER, aeNatSort, getHabs, isAfSerie } from '../types'
 import { Filtros } from '../components/Filtros'
 
@@ -9,6 +9,7 @@ interface Props {
   escopoEM: EscopoRow[]
   initialSerie?: string
   initialComp?: string
+  initialAE?: string
   onGoToHab: (serie: string, comp: string, hab: string) => void
   onGoToAula: (serie: string, comp: string, bim: string, aula: number) => void
   onFiltersChange?: (serie: string, comp: string) => void
@@ -16,17 +17,19 @@ interface Props {
 
 export function AprendizagemEssencial({
   aeAF, aeEM, escopoAF, escopoEM,
-  initialSerie = '', initialComp = '',
+  initialSerie = '', initialComp = '', initialAE = '',
   onGoToHab, onGoToAula, onFiltersChange,
 }: Props) {
   const [serie, setSerie] = useState(initialSerie)
   const [comp, setComp]   = useState(initialComp)
+  const [bim,  setBim]    = useState('')
   const [openAEs, setOpenAEs] = useState<Set<string>>(new Set())
+  const targetAERef = useRef('')
 
   const allEscopo = useMemo(() => [...escopoAF, ...escopoEM], [escopoAF, escopoEM])
 
-  function handleSerie(v: string) { setSerie(v); setComp(''); onFiltersChange?.(v, '') }
-  function handleComp(v: string)  { setComp(v);  onFiltersChange?.(serie, v) }
+  function handleSerie(v: string) { setSerie(v); setComp(''); setBim(''); onFiltersChange?.(v, '') }
+  function handleComp(v: string)  { setComp(v);  setBim('');  onFiltersChange?.(serie, v) }
 
   const isAF = isAfSerie(serie)
   const aeData = isAF ? aeAF : aeEM
@@ -36,9 +39,9 @@ export function AprendizagemEssencial({
   const aeRows = useMemo(() => {
     if (!serie || !comp) return []
     return aeData
-      .filter(r => r.serie === serie && r.componente === comp)
+      .filter(r => r.serie === serie && r.componente === comp && (!bim || r.bimestre === bim))
       .sort((a, b) => aeNatSort(a.ae, b.ae))
-  }, [aeData, serie, comp])
+  }, [aeData, serie, comp, bim])
 
   // Agrupar por bimestre
   const byBim = useMemo(() => {
@@ -57,7 +60,8 @@ export function AprendizagemEssencial({
   const aulasByAE = useMemo(() => {
     const map = new Map<string, EscopoRow[]>()
     for (const row of escopoData.filter(r => r.serie === serie && r.componente === comp)) {
-      const aeCodes = (row.aprendizagem_essencial || '').split(/\s+/).filter(Boolean)
+      const aeCode = (row.aprendizagem_essencial || '').match(/^AE\d+/)?.[0]
+      const aeCodes = aeCode ? [aeCode] : []
       for (const ae of aeCodes) {
         if (!map.has(ae)) map.set(ae, [])
         map.get(ae)!.push(row)
@@ -65,6 +69,20 @@ export function AprendizagemEssencial({
     }
     return map
   }, [escopoData, serie, comp])
+
+  // Abrir e scrollar para AE solicitada externamente
+  useEffect(() => {
+    if (!initialAE || initialAE === targetAERef.current) return
+    targetAERef.current = initialAE
+    // Encontrar a key do card correspondente
+    const row = aeRows.find(r => r.ae === initialAE)
+    if (!row) return
+    const key = `${row.serie}-${row.componente}-${row.ae}`
+    setOpenAEs(prev => new Set([...prev, key]))
+    setTimeout(() => {
+      document.getElementById(`ae-card-${initialAE}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 80)
+  }, [initialAE, aeRows])
 
   function toggleAE(key: string) {
     setOpenAEs(prev => {
@@ -86,10 +104,11 @@ export function AprendizagemEssencial({
     <>
       <Filtros
         escopo={allEscopo}
-        serie={serie} comp={comp} bim=""
-        showBim={false}
+        serie={serie} comp={comp} bim={bim}
+        showBim={true}
         onSerie={handleSerie}
         onComp={handleComp}
+        onBim={setBim}
       />
       <div className="c-content">
         {placeholder ? (
@@ -105,12 +124,12 @@ export function AprendizagemEssencial({
               {rows.map(ae => {
                 const key = `${ae.serie}-${ae.componente}-${ae.ae}`
                 const open = openAEs.has(key)
-                const hpChips = ae.hab_priorizada ? getHabs(ae.hab_priorizada) : []
-                const hrChips = ae.hab_relacionadas ? getHabs(ae.hab_relacionadas) : []
-                const cpChips = ae.conhecimentos_previos ? getHabs(ae.conhecimentos_previos) : []
-                const aulas   = aulasByAE.get(ae.ae) || []
+                const hpChips = ae.hab_priorizada ? getHabs(ae.hab_priorizada).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })) : []
+                const hrChips = ae.hab_relacionadas ? getHabs(ae.hab_relacionadas).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })) : []
+                const cpChips = ae.conhecimentos_previos ? getHabs(ae.conhecimentos_previos).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })) : []
+                const aulas   = (aulasByAE.get(ae.ae) || []).slice().sort((a, b) => a.aula - b.aula)
                 return (
-                  <div key={key} className={`ae-list-item${open ? ' open' : ''}`}>
+                  <div key={key} id={`ae-card-${ae.ae}`} className={`ae-list-item${open ? ' open' : ''}`}>
                     <div className="ae-list-header" onClick={() => toggleAE(key)}>
                       <span className="c-ae-badge">{ae.ae}</span>
                       <span style={{ flex: 1, fontWeight: 600, fontSize: '.9rem' }}>{ae.titulo}</span>
@@ -118,24 +137,28 @@ export function AprendizagemEssencial({
                     </div>
                     {open && (
                       <div className="ae-list-body">
-                        {hpChips.length > 0 && (
-                          <div style={{ marginTop: 12 }}>
-                            <div className="c-campo-label">Habilidade Prioritária</div>
-                            <div className="flex-chips" style={{ marginTop: 6 }}>
-                              {hpChips.map(h => (
-                                <span key={h} className="c-hab-chip" onClick={() => onGoToHab(serie, comp, h)}>{h}</span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {hrChips.length > 0 && (
-                          <div style={{ marginTop: 10 }}>
-                            <div className="c-campo-label">Outras Habilidades</div>
-                            <div className="flex-chips" style={{ marginTop: 6 }}>
-                              {hrChips.map(h => (
-                                <span key={h} className="c-hab-chip" onClick={() => onGoToHab(serie, comp, h)}>{h}</span>
-                              ))}
-                            </div>
+                        {(hpChips.length > 0 || hrChips.length > 0) && (
+                          <div style={{ marginTop: 12, display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+                            {hpChips.length > 0 && (
+                              <div>
+                                <div className="c-campo-label">Habilidade Prioritária</div>
+                                <div className="flex-chips" style={{ marginTop: 6 }}>
+                                  {hpChips.map(h => (
+                                    <span key={h} className="c-hab-chip-primary" onClick={() => onGoToHab(serie, comp, h)}>{h}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {hrChips.length > 0 && (
+                              <div>
+                                <div className="c-campo-label">Outras Habilidades</div>
+                                <div className="flex-chips" style={{ marginTop: 6 }}>
+                                  {hrChips.map(h => (
+                                    <span key={h} className="c-hab-chip" onClick={() => onGoToHab(serie, comp, h)}>{h}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                         {cpChips.length > 0 && (
@@ -143,7 +166,7 @@ export function AprendizagemEssencial({
                             <div className="c-campo-label">Conhecimentos Prévios</div>
                             <div className="flex-chips" style={{ marginTop: 6 }}>
                               {cpChips.map(h => (
-                                <span key={h} className="c-hab-chip-lg">{h}</span>
+                                <span key={h} className="c-hab-chip-prev">{h}</span>
                               ))}
                             </div>
                           </div>

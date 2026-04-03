@@ -22,6 +22,7 @@ export default function App() {
 
   // Estado de cross-tab: hab a selecionar quando chegar em Habilidades
   const [targetHab,  setTargetHab]  = useState('')
+  const [targetAE,   setTargetAE]   = useState('')
   const [scrollAula, setScrollAula] = useState<number | null>(null)
   const scrollAulaTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -44,12 +45,8 @@ export default function App() {
   }
 
   function goToAE(serie: string, comp: string, ae: string) {
+    setTargetAE(ae)
     goToTab('ae', { serie, comp, bim: '' })
-    // Abrir o card de AE correspondente após render
-    setTimeout(() => {
-      const el = document.getElementById(`ae-card-${ae}`)
-      if (el) { el.classList.add('open'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }) }
-    }, 80)
   }
 
   /* ── Render ────────────────────────────────────────────────── */
@@ -108,6 +105,7 @@ export default function App() {
           escopoEM={data.escopoEM}
           initialSerie={f.serie}
           initialComp={f.comp}
+          initialAE={targetAE}
           onGoToHab={goToHab}
           onGoToAula={goToAula}
           onFiltersChange={(s, c) => updateFilters('ae', { serie: s, comp: c })}

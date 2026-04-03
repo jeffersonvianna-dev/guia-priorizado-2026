@@ -158,11 +158,11 @@ export function EscopoSequencia({
                           <div className="c-aula-numero">Aula {aula.aula}</div>
                           <div className="c-aula-titulo">{aula.titulo}</div>
                           {aula.id_md && (
-                            <span title={`Material Digital: ${aula.id_md}`} style={{
+                            <span title="Esta aula possui Tarefa" style={{
                               fontSize: '.68rem', fontWeight: 700, letterSpacing: '.03em',
                               color: '#7c3aed', background: '#f5f3ff', border: '1px solid #c4b5fd',
                               borderRadius: 10, padding: '1px 7px', flexShrink: 0, whiteSpace: 'nowrap',
-                            }}>📋 MD</span>
+                            }}>📋 Tarefa</span>
                           )}
                           <div className="flex-chips c-aula-habs-preview">
                             {aeCode && (

@@ -133,6 +133,7 @@ export function EscopoSequencia({
     // — antes de qualquer processamento, senão o browser bloqueia o popup
     const w = window.open('about:blank', '_blank')
     if (!w) { alert('Permita pop-ups para gerar o PDF.'); return }
+    w.document.title = 'SEDUC SP'
 
     const seriesArr = sortSeries([...pdfSeries])
     const bimsArr   = BIM_ORDER.filter(b => pdfBims.has(b))

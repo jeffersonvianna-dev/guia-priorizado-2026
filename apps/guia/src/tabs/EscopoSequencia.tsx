@@ -89,6 +89,46 @@ export function EscopoSequencia({
     else setOpenCards(new Set())
   }, [serie, comp, bim])
 
+  function downloadPdf() {
+    const bimLabel = bim || 'Todos os Bimestres'
+    const title = `Escopo-Sequência — ${serie} / ${comp}`
+    const rowsHtml = aulas.map(a => {
+      const aeCode = (a.aprendizagem_essencial || '').match(/^AE\d+/)?.[0] || ''
+      const habs = getHabs(a.habilidades)
+      const tarefa = hasTarefa(a)
+      return `<tr>
+        <td>${a.aula}</td>
+        <td>${a.titulo}${tarefa ? ' <span class="tag-tarefa">📋 Tarefa</span>' : ''}</td>
+        <td>${aeCode || '—'}</td>
+        <td class="habs">${habs.join(' · ')}</td>
+      </tr>`
+    }).join('')
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+      <title>${title}</title><style>
+      body{font-family:'Segoe UI',sans-serif;color:#1a1f36;margin:36px;font-size:13px}
+      h1{font-size:17px;margin:0 0 4px;color:#005BAC}
+      .sub{font-size:12px;color:#6b7280;margin-bottom:24px}
+      table{width:100%;border-collapse:collapse}
+      th{background:#005BAC;color:#fff;padding:8px 10px;text-align:left;font-size:12px;font-weight:700}
+      td{padding:7px 10px;border-bottom:1px solid #e5e7eb;vertical-align:top}
+      tr:nth-child(even) td{background:#f8faff}
+      .habs{font-size:11px;color:#4b5563}
+      .tag-tarefa{font-size:10px;background:#f5f3ff;border:1px solid #c4b5fd;color:#7c3aed;border-radius:8px;padding:1px 6px;margin-left:6px;white-space:nowrap}
+      @media print{@page{margin:18mm}body{margin:0}}
+      </style></head><body>
+      <h1>${title}</h1>
+      <div class="sub">${bimLabel} &nbsp;·&nbsp; ${aulas.length} aula(s) &nbsp;·&nbsp; ${stats.totalHabs} habilidade(s)</div>
+      <table><thead><tr><th style="width:48px">Aula</th><th>Título</th><th style="width:48px">AE</th><th>Habilidades</th></tr></thead>
+      <tbody>${rowsHtml}</tbody></table>
+      </body></html>`
+    const w = window.open('', '_blank')
+    if (!w) { alert('Permita pop-ups para gerar o PDF.'); return }
+    w.document.write(html)
+    w.document.close()
+    w.focus()
+    setTimeout(() => { w.print(); w.close() }, 350)
+  }
+
   function toggleCard(aulaNum: number) {
     setOpenCards(prev => {
       const next = new Set(prev)
@@ -130,8 +170,8 @@ export function EscopoSequencia({
           </div>
         ) : (
           <>
-            {/* Stats pills */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+            {/* Stats pills + PDF */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 20, alignItems: 'center' }}>
               {[
                 { label: 'Aulas',       value: stats.totalAulas,    color: 'var(--blue)',   border: 'var(--blue)',          bg: 'var(--blue-light, #e8f0fe)' },
                 { label: 'AEs',         value: stats.totalAEs,      color: 'var(--orange)', border: 'var(--orange-border)', bg: 'var(--orange-light)' },
@@ -147,6 +187,14 @@ export function EscopoSequencia({
                   <span style={{ fontSize: '.8rem', color: 'var(--text-muted)' }}>{s.label}</span>
                 </div>
               ))}
+              <button onClick={downloadPdf} title={`Baixar PDF — ${serie} / ${comp}`} style={{
+                marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5,
+                background: 'none', border: '1px solid var(--gray-mid, #dde2ec)',
+                borderRadius: 20, padding: '4px 12px', cursor: 'pointer',
+                fontSize: '.8rem', color: 'var(--text-muted)', fontWeight: 600,
+              }}>
+                ⬇ PDF
+              </button>
             </div>
 
             {semanas.map((semAulas, si) => {

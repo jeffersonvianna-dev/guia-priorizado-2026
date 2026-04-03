@@ -98,8 +98,8 @@ export function isAfSerie(serie: string): boolean {
   return (AF_SERIES as readonly string[]).includes(serie)
 }
 
-export function getHabs(habilidades: string): string[] {
-  return habilidades.split(/\s+/).filter(Boolean)
+export function getHabs(habilidades: string | null | undefined): string[] {
+  return (habilidades || '').split(/\s+/).filter(Boolean)
 }
 
 export function sortSeries(arr: string[]): string[] {

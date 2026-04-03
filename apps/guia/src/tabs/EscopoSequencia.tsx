@@ -129,6 +129,11 @@ export function EscopoSequencia({
   function generatePdf() {
     if (!pdfComp || pdfSeries.size === 0 || pdfBims.size === 0) return
 
+    // Abrir janela IMEDIATAMENTE (contexto de gesto do usuário)
+    // — antes de qualquer processamento, senão o browser bloqueia o popup
+    const w = window.open('about:blank', '_blank')
+    if (!w) { alert('Permita pop-ups para gerar o PDF.'); return }
+
     const seriesArr = sortSeries([...pdfSeries])
     const bimsArr   = BIM_ORDER.filter(b => pdfBims.has(b))
     const bimLabel  = bimsArr.length === 4 ? 'Todos os Bimestres' : bimsArr.join(', ')
@@ -153,7 +158,7 @@ export function EscopoSequencia({
         return `<tr>
           <td>${a.bimestre}</td>
           <td>${a.aula}</td>
-          <td>${a.titulo}${tarefa ? ' <span class="tag-tarefa">📋 Tarefa</span>' : ''}</td>
+          <td>${a.titulo || '—'}${tarefa ? ' <span class="tag-tarefa">📋 Tarefa</span>' : ''}</td>
           <td>${aeCode || '—'}</td>
           <td class="habs">${habs.join(' · ')}</td>
         </tr>`
@@ -192,12 +197,10 @@ export function EscopoSequencia({
       ${blocosHtml}
       </body></html>`
 
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
-    const url  = URL.createObjectURL(blob)
-    const w    = window.open(url, '_blank')
-    if (!w) { alert('Permita pop-ups para gerar o PDF.'); URL.revokeObjectURL(url); return }
-    w.addEventListener('load', () => { w.print() })
-    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    w.document.open()
+    w.document.write(html)
+    w.document.close()
+    setTimeout(() => w.print(), 400)
     setShowPdfModal(false)
   }
 

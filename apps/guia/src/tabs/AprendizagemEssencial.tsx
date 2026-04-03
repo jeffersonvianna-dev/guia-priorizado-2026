@@ -102,39 +102,51 @@ export function AprendizagemEssencial({
         const cpChips = ae.conhecimentos_previos ? getHabs(ae.conhecimentos_previos) : []
         const aulas   = (aulasByAE.get(ae.ae) || []).slice().sort((a, b) => a.aula - b.aula)
 
+        // Linha 1: Hab Prioritária (esq) | Outras Habilidades (dir)
+        const row1 = (hpChips.length > 0 || hrChips.length > 0) ? `
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;margin-bottom:8px">
+            ${hpChips.length > 0 ? `<div>
+              <div class="campo-label">Habilidade Prioritária</div>
+              <div class="chips" style="margin-top:4px">${hpChips.map(h => `<span class="chip chip-blue-dark">${h}</span>`).join('')}</div>
+            </div>` : '<div></div>'}
+            ${hrChips.length > 0 ? `<div>
+              <div class="campo-label">Outras Habilidades</div>
+              <div class="chips" style="margin-top:4px">${hrChips.map(h => `<span class="chip chip-blue">${h}</span>`).join('')}</div>
+            </div>` : '<div></div>'}
+          </div>` : ''
+
+        // Linha 2: Conhecimentos Prévios (esq) | Aulas Vinculadas (dir)
+        const row2 = (cpChips.length > 0 || aulas.length > 0) ? `
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;border-top:1px solid #f3f4f6;padding-top:8px">
+            ${cpChips.length > 0 ? `<div>
+              <div class="campo-label">Conhecimentos Prévios</div>
+              <div class="chips" style="margin-top:4px">${cpChips.map(h => `<span class="chip chip-gray">${h}</span>`).join('')}</div>
+            </div>` : '<div></div>'}
+            ${aulas.length > 0 ? `<div>
+              <div class="campo-label">Aulas Vinculadas</div>
+              <div class="chips" style="margin-top:4px">${aulas.map(a => `<span class="chip chip-aula">${a.aula} — ${a.titulo || '—'}</span>`).join('')}</div>
+            </div>` : '<div></div>'}
+          </div>` : ''
+
         return `<div class="ae-block">
-          <div class="ae-header">
+          <div class="ae-header" style="margin-bottom:${row1 || row2 ? '10px' : '0'}">
             <span class="ae-badge">${ae.ae}</span>
             <span class="ae-titulo">${ae.titulo}</span>
           </div>
-          ${hpChips.length > 0 ? `<div class="campo">
-            <div class="campo-label">Habilidade Prioritária</div>
-            <div class="chips">${hpChips.map(h => `<span class="chip chip-blue-dark">${h}</span>`).join('')}</div>
-          </div>` : ''}
-          ${hrChips.length > 0 ? `<div class="campo">
-            <div class="campo-label">Outras Habilidades</div>
-            <div class="chips">${hrChips.map(h => `<span class="chip chip-blue">${h}</span>`).join('')}</div>
-          </div>` : ''}
-          ${cpChips.length > 0 ? `<div class="campo">
-            <div class="campo-label">Conhecimentos Prévios</div>
-            <div class="chips">${cpChips.map(h => `<span class="chip chip-gray">${h}</span>`).join('')}</div>
-          </div>` : ''}
-          ${aulas.length > 0 ? `<div class="campo">
-            <div class="campo-label">Aulas Vinculadas</div>
-            <div class="chips">${aulas.map(a => `<span class="chip chip-aula" title="${a.titulo || ''}">Aula ${a.aula}</span>`).join('')}</div>
-          </div>` : ''}
+          ${row1}${row2}
         </div>`
       }).join('')
 
       return `<div>
-        <div class="bim-pill">${b}</div>
+        <div class="bim-pill" style="margin-bottom:10px">${b}</div>
         ${aesHtml}
       </div>`
     }).join('')
 
     const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
       <title>${filename}</title><style>${PDF_CSS}
-      .bim-pill{margin-top:16px}
+      .ae-block{break-inside:avoid}
+      .chip-aula{font-size:10px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       </style>
       <script>window.onbeforeprint=function(){document.title=${JSON.stringify(filename)}}</script>
       </head><body>

@@ -96,7 +96,7 @@ export function MatrizPP({
   function generatePdf() {
     const filename = `Matriz PP 2026 - ${comp} - ${serie}`
 
-    const aesHtml = aes.map((ae, idx) => {
+    const aesHtml = aes.map((ae) => {
       const titulo = aeData.find(r => r.serie === serie && r.componente === comp && r.ae === ae)?.titulo || ''
       const descs  = matrizData.filter(r => r.serie === serie && r.componente === comp && r.ae === ae)
 
@@ -113,21 +113,18 @@ export function MatrizPP({
         </div>`
       }).join('')
 
-      return `<div class="${idx > 0 ? 'page-break' : ''}">
-        <div class="ae-block">
-          <div class="ae-header">
-            <span class="ae-badge">${ae}</span>
-            <span class="ae-titulo">${titulo}</span>
-          </div>
-          <h2 style="margin-top:8px">Descritores</h2>
-          ${gruposHtml}
+      return `<div class="ae-block">
+        <div class="ae-header">
+          <span class="ae-badge">${ae}</span>
+          <span class="ae-titulo">${titulo}</span>
         </div>
+        ${gruposHtml}
       </div>`
     }).join('')
 
     const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
       <title>${filename}</title><style>${PDF_CSS}
-      .ae-block{border:none;padding:0}
+      .ae-block{break-inside:avoid}
       </style>
       <script>window.onbeforeprint=function(){document.title=${JSON.stringify(filename)}}</script>
       </head><body>

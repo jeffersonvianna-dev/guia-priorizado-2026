@@ -109,8 +109,15 @@ export function Habilidades({
           <tbody>${aulas.map(a => `<tr><td>${a.aula}</td><td>${a.titulo || '—'}</td></tr>`).join('')}</tbody>
         </table>`).join('')
 
+      const bimPills = grupos.map(g =>
+        `<span class="bim-pill" style="margin-left:6px;font-size:10px;padding:1px 8px">${g.b}</span>`
+      ).join('')
+
       return `<div class="ae-block">
-        <div style="font-size:.88rem;font-weight:800;color:#005BAC;margin-bottom:10px">${h}</div>
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:10px">
+          <span style="font-size:.9rem;font-weight:800;color:#005BAC">${h}</span>
+          ${bimPills}
+        </div>
         ${gruposHtml}
       </div>`
     }).join('')

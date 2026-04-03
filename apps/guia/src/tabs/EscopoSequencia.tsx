@@ -40,7 +40,13 @@ export function EscopoSequencia({
   const allEscopo = useMemo(() => [...escopoAF, ...escopoEM], [escopoAF, escopoEM])
   const escopoData = isAfSerie(serie) ? escopoAF : escopoEM
 
-  function handleSerie(v: string) { setSerie(v); setComp(''); setBim('1º Bimestre'); onFiltersChange?.(v,'','1º Bimestre') }
+  function handleSerie(v: string) {
+    const data = isAfSerie(v) ? escopoAF : escopoEM
+    const avail = new Set(data.filter(r => r.serie === v).map(r => r.componente))
+    const newComp = avail.has(comp) ? comp : ''
+    setSerie(v); setComp(newComp); setBim('1º Bimestre')
+    onFiltersChange?.(v, newComp, '1º Bimestre')
+  }
   function handleComp(v: string)  { setComp(v);  setBim('1º Bimestre'); onFiltersChange?.(serie,v,'1º Bimestre') }
   function handleBim(v: string)   { setBim(v);   onFiltersChange?.(serie,comp,v) }
 

@@ -35,7 +35,13 @@ export function MatrizPP({
   // Suppress unused warnings for cross-tab navigation props
   void onGoToHab; void onGoToAula
 
-  function handleSerie(v: string) { setSerie(v); setComp(''); setSelAE(''); onFiltersChange?.(v,'') }
+  function handleSerie(v: string) {
+    const data = isAfSerie(v) ? escopoAF : escopoEM
+    const avail = new Set(data.filter(r => r.serie === v).map(r => r.componente))
+    const newComp = avail.has(comp) ? comp : ''
+    setSerie(v); setComp(newComp); setSelAE('')
+    onFiltersChange?.(v, newComp)
+  }
   function handleComp(v: string)  { setComp(v);  setSelAE(''); onFiltersChange?.(serie,v) }
 
   // AEs disponíveis para a série+comp

@@ -29,7 +29,13 @@ export function Habilidades({
   const allEscopo = useMemo(() => [...escopoAF, ...escopoEM], [escopoAF, escopoEM])
   const escopoData = isAfSerie(serie) ? escopoAF : escopoEM
 
-  function handleSerie(v: string) { setSerie(v); setComp(''); setBim(''); setSelHab(''); onFiltersChange?.(v,'','') }
+  function handleSerie(v: string) {
+    const data = isAfSerie(v) ? escopoAF : escopoEM
+    const avail = new Set(data.filter(r => r.serie === v).map(r => r.componente))
+    const newComp = avail.has(comp) ? comp : ''
+    setSerie(v); setComp(newComp); setBim(''); setSelHab('')
+    onFiltersChange?.(v, newComp, '')
+  }
   function handleComp(v: string)  { setComp(v);  setBim(''); setSelHab(''); onFiltersChange?.(serie,v,'') }
   function handleBim(v: string)   { setBim(v);   setSelHab(''); onFiltersChange?.(serie,comp,v) }
 

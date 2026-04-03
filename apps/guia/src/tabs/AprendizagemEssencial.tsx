@@ -28,7 +28,13 @@ export function AprendizagemEssencial({
 
   const allEscopo = useMemo(() => [...escopoAF, ...escopoEM], [escopoAF, escopoEM])
 
-  function handleSerie(v: string) { setSerie(v); setComp(''); setBim(''); onFiltersChange?.(v, '') }
+  function handleSerie(v: string) {
+    const data = isAfSerie(v) ? escopoAF : escopoEM
+    const avail = new Set(data.filter(r => r.serie === v).map(r => r.componente))
+    const newComp = avail.has(comp) ? comp : ''
+    setSerie(v); setComp(newComp); setBim('')
+    onFiltersChange?.(v, newComp)
+  }
   function handleComp(v: string)  { setComp(v);  setBim('');  onFiltersChange?.(serie, v) }
 
   const isAF = isAfSerie(serie)

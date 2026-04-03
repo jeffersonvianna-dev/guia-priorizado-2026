@@ -159,7 +159,7 @@ export function EscopoSequencia() {
       <div className="cms-filtros">
         <div className="c-filtro-group">
           <label>Série *</label>
-          <select value={serie} onChange={e => { const s = e.target.value; setSerie(s); setComp(c => compsFor(s).includes(c) ? c : (compsFor(s)[0] || '')) }}>
+          <select value={serie} onChange={e => { const s = e.target.value; setSerie(s); setComp(c => (compsFor(s) as string[]).includes(c) ? c : (compsFor(s)[0] || '')) }}>
             {ALL_SERIES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>

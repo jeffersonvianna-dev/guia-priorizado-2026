@@ -154,7 +154,7 @@ export function CurriculoPaulista() {
               <th style={{ width: 80 }}>Segmento</th>
               <th style={{ width: 130 }}>Componente</th>
               <th style={{ width: 90 }}>Série</th>
-              <th>Texto</th>
+              <th>Título</th>
               <th style={{ width: 72 }}></th>
             </tr></thead>
             <tbody>

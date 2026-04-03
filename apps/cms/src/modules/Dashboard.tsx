@@ -14,20 +14,19 @@ interface Props {
   onGo: (id: string) => void
 }
 
-async function countTable(table: string, col?: string, vals?: string[]): Promise<number> {
-  let q = db.from(table).select('id', { count: 'exact', head: true })
-  if (col && vals) {
-    // count for both AF + EM tables summed
-  }
-  const { count } = await q
-  return count ?? 0
+async function sumCounts(tables: string[]): Promise<number> {
+  const results = await Promise.all(
+    tables.map(async t => {
+      const { count } = await db.from(t).select('id', { count: 'exact', head: true })
+      return count ?? 0
+    })
+  )
+  return results.reduce((a, b) => a + b, 0)
 }
 
-async function sumCounts(tables: string[]): Promise<number> {
-  const results = await Promise.all(tables.map(t =>
-    db.from(t).select('id', { count: 'exact', head: true }).then(r => r.count ?? 0)
-  ))
-  return results.reduce((a, b) => a + b, 0)
+async function countOne(table: string): Promise<number> {
+  const { count } = await db.from(table).select('id', { count: 'exact', head: true })
+  return count ?? 0
 }
 
 const MODULES: ModuleCard[] = [
@@ -53,7 +52,7 @@ const MODULES: ModuleCard[] = [
     label: 'Matriz Prova Paulista',
     desc: 'Descritores da Prova Paulista vinculados às AEs, organizados por grupo e componente.',
     color: '#7c3aed',
-    countQuery: () => db.from('matriz_descritores_af').select('id', { count: 'exact', head: true }).then(r => r.count ?? 0),
+    countQuery: () => countOne('matriz_descritores_af'),
   },
   {
     id: 'cp',
@@ -61,7 +60,7 @@ const MODULES: ModuleCard[] = [
     label: 'Currículo Paulista',
     desc: 'Habilidades do Currículo Paulista com código BNCC, série e componente, organizadas por segmento.',
     color: '#b45309',
-    countQuery: () => db.from('curriculo_paulista').select('id', { count: 'exact', head: true }).then(r => r.count ?? 0),
+    countQuery: () => countOne('curriculo_paulista'),
   },
 ]
 
@@ -71,7 +70,9 @@ export function Dashboard({ onGo }: Props) {
   useEffect(() => {
     MODULES.forEach(m => {
       if (!m.countQuery) return
-      m.countQuery().then(n => setCounts(prev => ({ ...prev, [m.id]: n }))).catch(() => {})
+      m.countQuery()
+        .then(n => setCounts(prev => ({ ...prev, [m.id]: n })))
+        .catch(() => {})
     })
   }, [])
 

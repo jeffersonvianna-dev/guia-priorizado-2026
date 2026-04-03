@@ -82,10 +82,6 @@ export function Dashboard({ onGo }: Props) {
       <div className="dash-hero">
         <div className="dash-hero-inner">
           <div className="dash-hero-icon">GP</div>
-          <div>
-            <h1 className="dash-hero-title">Sistema de Gestão do Guia 2026</h1>
-            <p className="dash-hero-sub">Guia Priorizado 2026 · Ano Letivo</p>
-          </div>
         </div>
       </div>
 

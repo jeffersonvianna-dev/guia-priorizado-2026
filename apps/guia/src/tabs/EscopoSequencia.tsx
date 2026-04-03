@@ -194,7 +194,9 @@ export function EscopoSequencia({
       .tag-tarefa{font-size:10px;background:#f5f3ff;border:1px solid #c4b5fd;color:#7c3aed;border-radius:8px;padding:1px 6px;margin-left:6px;white-space:nowrap}
       .page-break{page-break-before:always;padding-top:8px}
       @media print{@page{margin:18mm}body{margin:0}.page-break{page-break-before:always}}
-      </style></head><body>
+      </style>
+      <script>window.onbeforeprint=function(){document.title=${JSON.stringify(filename)}}</script>
+      </head><body>
       ${blocosHtml}
       </body></html>`
 

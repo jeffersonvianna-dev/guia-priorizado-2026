@@ -102,29 +102,29 @@ export function AprendizagemEssencial({
         const cpChips = ae.conhecimentos_previos ? getHabs(ae.conhecimentos_previos) : []
         const aulas   = (aulasByAE.get(ae.ae) || []).slice().sort((a, b) => a.aula - b.aula)
 
-        // Linha 1: Hab Prioritária (esq) | Outras Habilidades (dir)
-        const row1 = (hpChips.length > 0 || hrChips.length > 0) ? `
+        // Linha 1: Hab Prioritária (esq) | Conhecimentos Prévios (dir)
+        const row1 = (hpChips.length > 0 || cpChips.length > 0) ? `
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;margin-bottom:8px">
             ${hpChips.length > 0 ? `<div>
               <div class="campo-label">Habilidade Prioritária</div>
-              <div class="chips" style="margin-top:4px">${hpChips.map(h => `<span class="chip chip-blue-dark">${h}</span>`).join('')}</div>
+              <div class="chips" style="margin-top:4px">${hpChips.map(h => `<span class="chip" style="background:#e6f4ea;border-color:#16a34a;color:#16a34a;font-weight:700">${h}</span>`).join('')}</div>
             </div>` : '<div></div>'}
-            ${hrChips.length > 0 ? `<div>
-              <div class="campo-label">Outras Habilidades</div>
-              <div class="chips" style="margin-top:4px">${hrChips.map(h => `<span class="chip chip-blue">${h}</span>`).join('')}</div>
+            ${cpChips.length > 0 ? `<div>
+              <div class="campo-label">Conhecimentos Prévios</div>
+              <div class="chips" style="margin-top:4px">${cpChips.map(h => `<span class="chip" style="background:#f0f0f0;border-color:#ddd;color:#888">${h}</span>`).join('')}</div>
             </div>` : '<div></div>'}
           </div>` : ''
 
-        // Linha 2: Conhecimentos Prévios (esq) | Aulas Vinculadas (dir)
-        const row2 = (cpChips.length > 0 || aulas.length > 0) ? `
+        // Linha 2: Outras Habilidades (esq) | Aulas Vinculadas (dir)
+        const row2 = (hrChips.length > 0 || aulas.length > 0) ? `
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;border-top:1px solid #f3f4f6;padding-top:8px">
-            ${cpChips.length > 0 ? `<div>
-              <div class="campo-label">Conhecimentos Prévios</div>
-              <div class="chips" style="margin-top:4px">${cpChips.map(h => `<span class="chip chip-gray">${h}</span>`).join('')}</div>
+            ${hrChips.length > 0 ? `<div>
+              <div class="campo-label">Outras Habilidades</div>
+              <div class="chips" style="margin-top:4px">${hrChips.map(h => `<span class="chip" style="background:#e8f0f9;border-color:#c0d9f0;color:#005BAC">${h}</span>`).join('')}</div>
             </div>` : '<div></div>'}
             ${aulas.length > 0 ? `<div>
               <div class="campo-label">Aulas Vinculadas</div>
-              <div class="chips" style="margin-top:4px">${aulas.map(a => `<span class="chip chip-aula">${a.aula} — ${a.titulo || '—'}</span>`).join('')}</div>
+              <div class="chips" style="margin-top:4px">${aulas.map(a => `<span class="chip" style="background:#fff3e8;border-color:#f5c99a;color:#F47920;font-weight:700">${a.aula}</span>`).join('')}</div>
             </div>` : '<div></div>'}
           </div>` : ''
 

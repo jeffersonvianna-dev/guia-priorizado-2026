@@ -15,7 +15,7 @@ export const PDF_CSS = `
   h1{font-size:17px;margin:0 0 4px;color:#005BAC;font-weight:800}
   h2{font-size:11px;margin:20px 0 10px;color:#005BAC;font-weight:800;text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid #005BAC;padding-bottom:4px}
   .sub{font-size:12px;color:#6b7280;margin-bottom:24px}
-  .ae-badge{display:inline-block;background:#005BAC;color:#fff;border-radius:6px;padding:2px 10px;font-size:11px;font-weight:800;margin-right:8px;white-space:nowrap}
+  .ae-badge{display:inline-block;background:#fff3e8;color:#F47920;border:1px solid #f5c99a;border-radius:6px;padding:2px 10px;font-size:11px;font-weight:800;margin-right:8px;white-space:nowrap}
   .ae-block{margin-bottom:20px;padding:14px 16px;border:1px solid #e5e7eb;border-radius:8px;break-inside:avoid}
   .ae-header{display:flex;align-items:flex-start;gap:8px;margin-bottom:10px}
   .ae-titulo{font-weight:700;font-size:.9rem;flex:1}

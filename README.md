@@ -1,124 +1,63 @@
 # Guia Priorizado 2026
 
-Repositorio do Guia Priorizado 2026, hoje baseado em dois HTMLs estaticos com leitura e escrita direta no Supabase.
+Monorepo com painel público e CMS para o Guia do Currículo Priorizado 2026 — SEDUC SP.
 
-## Estado atual
+## Apps
 
-- Repo oficial: `jeffersonvianna-dev/guia-priorizado-2026`
-- Estrutura atual:
-  - `escopo_sequencia.html`
-  - `cms.html`
-  - `CLAUDE.md`
-- Nao existe app React
-- Nao existe backend Node dedicado
-- Nao existe pasta `supabase/` versionada no repo
+| App | URL | Descrição |
+|-----|-----|-----------|
+| **Guia público** | https://guia-priorizado-2026-guia.vercel.app | 5 abas de consulta (AE, Escopo, Habilidades, Matriz PP) |
+| **CMS** | https://guia-priorizado-2026-cms.vercel.app | Dashboard + 4 módulos de edição CRUD |
 
-## Arquitetura atual
+## Stack
 
-### Guia publico
+- **React 19 + Vite + TypeScript** (monorepo npm workspaces)
+- **Supabase** — Cactus Tech, schema `2026_guia_priorizado`
+- **Vercel** — deploy automático no push para `main`
+- **Vercel Functions** (`apps/cms/api/`) — mutações server-side com service role
 
-Arquivo principal:
+## Estrutura
 
-- `escopo_sequencia.html`
+```
+guia-priorizado-2026/
+├── apps/
+│   ├── guia/          → painel público React (5 abas)
+│   └── cms/           → CMS React + Vercel Functions
+│       └── api/       → endpoints de mutação (service role)
+├── packages/
+│   └── core/          → domínio compartilhado (tipos, helpers, cascade)
+├── CLAUDE.md          → contexto completo para Claude Code
+├── DATABASE.md        → schema completo do Supabase
+└── README.md          → este arquivo
+```
 
-Caracteristicas:
+## Documentação
 
-- pagina unica HTML com CSS e JS inline
-- 5 abas:
-  - Para Comecar
-  - Aprendizagem Essencial
-  - Escopo-Sequencia
-  - Habilidades
-  - Matriz Prova Paulista
-- usa hash, `pushState` e `popstate`
-- carrega dados diretamente do Supabase no browser
-- busca tabelas inteiras com `_fetchAll()`
+- **[CLAUDE.md](./CLAUDE.md)** — contexto completo da arquitetura, regras de negócio e estado atual
+- **[DATABASE.md](./DATABASE.md)** — schema detalhado de todas as tabelas Supabase
 
-Tabelas lidas:
+## Desenvolvimento local
 
-- `escopo_af`
-- `escopo_em`
-- `ae_detalhes_af`
-- `ae_detalhes_em`
-- `matriz_descritores_af`
-- `matriz_descritores_em`
+```bash
+# Instalar dependências
+npm install
 
-### CMS
+# Copiar variáveis de ambiente
+cp apps/guia/.env.example apps/guia/.env.local
+cp apps/cms/.env.example apps/cms/.env.local
+# Preencher VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
 
-Arquivo principal:
+# Rodar guia público (porta 5173)
+npm run dev --workspace=apps/guia
 
-- `cms.html`
+# Rodar CMS (porta 5174)
+npm run dev --workspace=apps/cms
+```
 
-Caracteristicas:
+## Regras críticas
 
-- pagina unica HTML com CSS e JS inline
-- 4 modulos:
-  - Curriculo Paulista
-  - Aprendizagem Essencial
-  - Escopo-Sequencia
-  - Matriz Prova Paulista
-- CRUD direto no Supabase pelo frontend
-- sem autenticacao no app
-- regras de negocio importantes implementadas no JS inline
-
-Tabelas usadas:
-
-- `curriculo_paulista`
-- `ae_detalhes_af`
-- `ae_detalhes_em`
-- `escopo_af`
-- `escopo_em`
-- `matriz_descritores_af`
-- `matriz_descritores_em`
-
-## Supabase legado referenciado no codigo
-
-- project ref: `uhbsnrnnnhntkibtsyre`
-- schema usado no browser: `guia_priorizado`
-
-Observacoes:
-
-- URL e anon key estao embutidas no HTML
-- o CMS escreve no banco direto do navegador
-- isso precisa mudar na nova arquitetura
-
-## Regras de negocio que precisam ser preservadas
-
-- `escopo_af` usa coluna `ano`
-- `escopo_em` usa coluna `serie`
-- `ae_detalhes_*` e `matriz_descritores_*` usam `serie`
-- validacao de habilidades contra `curriculo_paulista`
-- cascade rename/delete de `id_habilidade` no CMS
-- navegacao cruzada entre escopo, AE, habilidades e matriz
-
-## Riscos do estado atual
-
-- CMS sem auth
-- CRUD sensivel direto no frontend
-- segredo e acesso expostos no HTML
-- logica critica dificil de testar
-- banco nao versionado no repo
-- risco alto de regressao sem checklist de paridade
-
-## Direcao alvo
-
-Arquitetura recomendada:
-
-- monorepo
-- `apps/guia`
-- `apps/cms`
-- `packages/core`
-- opcionalmente `packages/ui`
-- `supabase/` versionado
-- backend leve com Vercel Functions ou Node dedicado
-
-## Publicacao alvo
-
-- um projeto Vercel para o guia publico
-- um projeto Vercel para o CMS
-- variaveis e configuracoes separadas
-
-## Documentos de apoio
-
-- plano de migracao: `MIGRATION_PLAN.md`
-- contexto historico reduzido: `CLAUDE.md`
+- `escopo_af` usa coluna `ano` (não `serie`) — única exceção no schema
+- `habilidades` é string espaço-separada — sempre `.split(/\s+/).filter(Boolean)`
+- AE code: regex `/^AE\d+/` — nunca split por espaço
+- Mutações sempre via Vercel Functions — `service_role` nunca no browser
+- Tarefa badge: lookup via `md_tarefas`, não via `escopo.id_md`

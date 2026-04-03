@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { type AeDetalhesRow, type EscopoRow, type MatrizDescritoresRow, aeNatSort, isAfSerie } from '../types'
 import { Filtros } from '../components/Filtros'
+import { openPrintWindow, PDF_CSS, pdfButtonStyle } from '../utils/pdf'
 
 interface Props {
   aeAF: AeDetalhesRow[]
@@ -90,6 +91,54 @@ export function MatrizPP({
     return map
   }, [matrizData, serie, comp])
 
+  const GRUPO_CLASSES: Record<string, string> = { 'Grupo 1': 'g1', 'Grupo 2': 'g2', 'Grupo 3': 'g3' }
+
+  function generatePdf() {
+    const filename = `Matriz PP 2026 - ${comp} - ${serie}`
+
+    const aesHtml = aes.map((ae, idx) => {
+      const titulo = aeData.find(r => r.serie === serie && r.componente === comp && r.ae === ae)?.titulo || ''
+      const descs  = matrizData.filter(r => r.serie === serie && r.componente === comp && r.ae === ae)
+
+      const gruposHtml = GRUPOS.map(grupo => {
+        const rows = descs.filter(d => d.grupo === grupo)
+        if (rows.length === 0) return ''
+        return `<div style="margin-bottom:10px">
+          <div class="grupo-header ${GRUPO_CLASSES[grupo]}">${grupo}</div>
+          <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
+            ${rows.map(d => `<li style="font-size:.82rem;line-height:1.5">
+              ${d.bimestre ? `<span style="font-size:10px;font-weight:700;color:#f97316">${d.bimestre} — </span>` : ''}${d.descritor}
+            </li>`).join('')}
+          </ul>
+        </div>`
+      }).join('')
+
+      return `<div class="${idx > 0 ? 'page-break' : ''}">
+        <div class="ae-block">
+          <div class="ae-header">
+            <span class="ae-badge">${ae}</span>
+            <span class="ae-titulo">${titulo}</span>
+          </div>
+          <h2 style="margin-top:8px">Descritores</h2>
+          ${gruposHtml}
+        </div>
+      </div>`
+    }).join('')
+
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+      <title>${filename}</title><style>${PDF_CSS}
+      .ae-block{border:none;padding:0}
+      </style>
+      <script>window.onbeforeprint=function(){document.title=${JSON.stringify(filename)}}</script>
+      </head><body>
+      <h1>Matriz da Prova Paulista 2026</h1>
+      <div class="sub">${serie} &nbsp;·&nbsp; ${comp} &nbsp;·&nbsp; ${aes.length} AE(s)</div>
+      ${aesHtml}
+      </body></html>`
+
+    openPrintWindow(html, filename)
+  }
+
   const placeholder = !serie
     ? { icon: '📝', title: 'Selecione uma série', sub: '' }
     : !comp
@@ -114,6 +163,9 @@ export function MatrizPP({
           </div>
         ) : (
           <>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+              <button onClick={generatePdf} style={pdfButtonStyle}>⬇ Baixar PDF</button>
+            </div>
             {/* Grid de AEs selecionáveis — apenas código */}
             <div className="c-section-h" style={{ marginBottom: 12 }}>Aprendizagens Essenciais</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginBottom: 24 }}>

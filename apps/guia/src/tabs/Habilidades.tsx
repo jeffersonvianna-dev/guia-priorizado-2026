@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { type EscopoRow, getHabs, fmtList, isAfSerie, BIM_ORDER } from '../types'
 import { Filtros } from '../components/Filtros'
+import { openPrintWindow, PDF_CSS, pdfButtonStyle } from '../utils/pdf'
 
 interface Props {
   escopoAF: EscopoRow[]
@@ -85,6 +86,47 @@ export function Habilidades({
     else setOpenCards(new Set())
   }, [effectiveHab])
 
+  function generatePdf() {
+    const filename = `Habilidades 2026 - ${comp} - ${serie}`
+    const bimLabel = bim || 'Todos os Bimestres'
+
+    const habsHtml = habs.map(h => {
+      const aulasSorted = (habMap.get(h)?.aulas || [])
+      // Agrupar por bimestre
+      const byBimMap = new Map<string, EscopoRow[]>()
+      for (const a of aulasSorted) {
+        if (!byBimMap.has(a.bimestre)) byBimMap.set(a.bimestre, [])
+        byBimMap.get(a.bimestre)!.push(a)
+      }
+      const grupos = BIM_ORDER
+        .map(b => ({ b, aulas: (byBimMap.get(b) || []).sort((x, y) => +x.aula - +y.aula) }))
+        .filter(g => g.aulas.length > 0)
+
+      const gruposHtml = grupos.map(({ b, aulas }) => `
+        <div class="bim-pill">${b}</div>
+        <table>
+          <thead><tr><th style="width:54px">Aula</th><th>Título</th></tr></thead>
+          <tbody>${aulas.map(a => `<tr><td>${a.aula}</td><td>${a.titulo || '—'}</td></tr>`).join('')}</tbody>
+        </table>`).join('')
+
+      return `<div class="ae-block">
+        <div style="font-size:.88rem;font-weight:800;color:#005BAC;margin-bottom:10px">${h}</div>
+        ${gruposHtml}
+      </div>`
+    }).join('')
+
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+      <title>${filename}</title><style>${PDF_CSS}</style>
+      <script>window.onbeforeprint=function(){document.title=${JSON.stringify(filename)}}</script>
+      </head><body>
+      <h1>Habilidades 2026</h1>
+      <div class="sub">${serie} &nbsp;·&nbsp; ${comp} &nbsp;·&nbsp; ${bimLabel} &nbsp;·&nbsp; ${habs.length} habilidade(s)</div>
+      ${habsHtml}
+      </body></html>`
+
+    openPrintWindow(html, filename)
+  }
+
   function toggleCard(id: number) {
     setOpenCards(prev => {
       const next = new Set(prev)
@@ -127,6 +169,9 @@ export function Habilidades({
           </div>
         ) : (
           <>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+              <button onClick={generatePdf} style={pdfButtonStyle}>⬇ Baixar PDF</button>
+            </div>
             {/* Grid de habilidades — apenas código, sem meta */}
             <div className="hab-grid">
               {habs.map(h => {

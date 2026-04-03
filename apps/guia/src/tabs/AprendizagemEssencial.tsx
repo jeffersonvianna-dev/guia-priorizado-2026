@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { type AeDetalhesRow, type EscopoRow, BIM_ORDER, aeNatSort, getHabs, isAfSerie } from '../types'
 import { Filtros } from '../components/Filtros'
+import { openPrintWindow, PDF_CSS, pdfButtonStyle } from '../utils/pdf'
 
 interface Props {
   aeAF: AeDetalhesRow[]
@@ -90,6 +91,61 @@ export function AprendizagemEssencial({
     }, 80)
   }, [initialAE, aeRows])
 
+  function generatePdf() {
+    const filename = `AE 2026 - ${comp} - ${serie}`
+    const bimLabel = bim || 'Todos os Bimestres'
+
+    const blocosHtml = byBim.map(({ bim: b, rows }) => {
+      const aesHtml = rows.map(ae => {
+        const hpChips = ae.hab_priorizada ? getHabs(ae.hab_priorizada) : []
+        const hrChips = ae.hab_relacionadas ? getHabs(ae.hab_relacionadas) : []
+        const cpChips = ae.conhecimentos_previos ? getHabs(ae.conhecimentos_previos) : []
+        const aulas   = (aulasByAE.get(ae.ae) || []).slice().sort((a, b) => a.aula - b.aula)
+
+        return `<div class="ae-block">
+          <div class="ae-header">
+            <span class="ae-badge">${ae.ae}</span>
+            <span class="ae-titulo">${ae.titulo}</span>
+          </div>
+          ${hpChips.length > 0 ? `<div class="campo">
+            <div class="campo-label">Habilidade Prioritária</div>
+            <div class="chips">${hpChips.map(h => `<span class="chip chip-blue-dark">${h}</span>`).join('')}</div>
+          </div>` : ''}
+          ${hrChips.length > 0 ? `<div class="campo">
+            <div class="campo-label">Outras Habilidades</div>
+            <div class="chips">${hrChips.map(h => `<span class="chip chip-blue">${h}</span>`).join('')}</div>
+          </div>` : ''}
+          ${cpChips.length > 0 ? `<div class="campo">
+            <div class="campo-label">Conhecimentos Prévios</div>
+            <div class="chips">${cpChips.map(h => `<span class="chip chip-gray">${h}</span>`).join('')}</div>
+          </div>` : ''}
+          ${aulas.length > 0 ? `<div class="campo">
+            <div class="campo-label">Aulas Vinculadas</div>
+            <div class="chips">${aulas.map(a => `<span class="chip chip-aula" title="${a.titulo || ''}">Aula ${a.aula}</span>`).join('')}</div>
+          </div>` : ''}
+        </div>`
+      }).join('')
+
+      return `<div>
+        <div class="bim-pill">${b}</div>
+        ${aesHtml}
+      </div>`
+    }).join('')
+
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+      <title>${filename}</title><style>${PDF_CSS}
+      .bim-pill{margin-top:16px}
+      </style>
+      <script>window.onbeforeprint=function(){document.title=${JSON.stringify(filename)}}</script>
+      </head><body>
+      <h1>Aprendizagens Essenciais 2026</h1>
+      <div class="sub">${serie} &nbsp;·&nbsp; ${comp} &nbsp;·&nbsp; ${bimLabel} &nbsp;·&nbsp; ${aeRows.length} AE(s)</div>
+      ${blocosHtml}
+      </body></html>`
+
+    openPrintWindow(html, filename)
+  }
+
   function toggleAE(key: string) {
     setOpenAEs(prev => {
       const next = new Set(prev)
@@ -124,7 +180,11 @@ export function AprendizagemEssencial({
             {placeholder.sub && <p>{placeholder.sub}</p>}
           </div>
         ) : (
-          byBim.map(({ bim, rows }) => (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+              <button onClick={generatePdf} style={pdfButtonStyle}>⬇ Baixar PDF</button>
+            </div>
+            {byBim.map(({ bim, rows }) => (
             <div key={bim} style={{ marginBottom: 28 }}>
               <div className="c-section-h">{bim}</div>
               {rows.map(ae => {
@@ -200,7 +260,8 @@ export function AprendizagemEssencial({
                 )
               })}
             </div>
-          ))
+          ))}
+          </>
         )}
       </div>
     </>

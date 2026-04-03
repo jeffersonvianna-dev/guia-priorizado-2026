@@ -116,6 +116,7 @@ export default function App() {
         <EscopoSequencia
           escopoAF={data.escopoAF}
           escopoEM={data.escopoEM}
+          mdTarefas={data.mdTarefas}
           initialSerie={f.serie}
           initialComp={f.comp}
           initialBim={f.bim}

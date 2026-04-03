@@ -124,6 +124,18 @@ export function aeNatSort(a: string, b: string): number {
   return (parseInt(a.replace(/\D+/g,'')) || 0) - (parseInt(b.replace(/\D+/g,'')) || 0)
 }
 
+export interface MdTarefaRow {
+  id: number
+  serie: string
+  componente: string
+  bimestre: string
+  aula: number
+  id_md: string | null
+  id_tarefa: string | null
+  localizador: string | null
+  titulo: string | null
+}
+
 export function fmtList(txt: string | null): string[] {
   if (!txt) return []
   const items = txt.split(/\s*[-–•]\s+/).map(s => s.trim()).filter(Boolean)

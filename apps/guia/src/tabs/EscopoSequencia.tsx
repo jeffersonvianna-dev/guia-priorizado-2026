@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from 'react'
-import { type EscopoRow, getHabs, fmtList, isAfSerie } from '../types'
+import { type EscopoRow, type MdTarefaRow, getHabs, fmtList, isAfSerie } from '../types'
 import { Filtros } from '../components/Filtros'
 
 interface Props {
   escopoAF: EscopoRow[]
   escopoEM: EscopoRow[]
+  mdTarefas: MdTarefaRow[]
   initialSerie?: string
   initialComp?: string
   initialBim?: string
@@ -28,7 +29,7 @@ function calcSemanas(aulas: EscopoRow[]) {
 }
 
 export function EscopoSequencia({
-  escopoAF, escopoEM,
+  escopoAF, escopoEM, mdTarefas,
   initialSerie = '', initialComp = '', initialBim = '',
   onGoToHab, onGoToAE, onFiltersChange, scrollToAula,
 }: Props) {
@@ -38,6 +39,16 @@ export function EscopoSequencia({
   const [openCards, setOpenCards] = useState<Set<number>>(new Set())
 
   const allEscopo = useMemo(() => [...escopoAF, ...escopoEM], [escopoAF, escopoEM])
+
+  const tarefaSet = useMemo(() => {
+    const s = new Set<string>()
+    mdTarefas.forEach(t => s.add(`${t.serie}|${t.componente}|${t.aula}`))
+    return s
+  }, [mdTarefas])
+
+  function hasTarefa(a: EscopoRow) {
+    return tarefaSet.has(`${a.serie}|${a.componente}|${a.aula}`)
+  }
   const escopoData = isAfSerie(serie) ? escopoAF : escopoEM
 
   function handleSerie(v: string) {
@@ -68,7 +79,7 @@ export function EscopoSequencia({
     const totalHabs = new Set(
       aulas.flatMap(r => getHabs(r.habilidades))
     ).size
-    const totalTarefas = aulas.filter(r => r.id_md).length
+    const totalTarefas = aulas.filter(hasTarefa).length
     return { totalAulas, totalAEs, totalHabs, totalTarefas }
   }, [aulas])
 
@@ -157,7 +168,7 @@ export function EscopoSequencia({
                         <div className="c-aula-card-header" onClick={() => toggleCard(aula.aula)}>
                           <div className="c-aula-numero">Aula {aula.aula}</div>
                           <div className="c-aula-titulo">{aula.titulo}</div>
-                          {aula.id_md && (
+                          {hasTarefa(aula) && (
                             <span title="Esta aula possui Tarefa" style={{
                               fontSize: '.68rem', fontWeight: 700, letterSpacing: '.03em',
                               color: '#7c3aed', background: '#f5f3ff', border: '1px solid #c4b5fd',

@@ -260,12 +260,13 @@ export function EscopoSequencia({
                 </div>
               ))}
               <button onClick={openPdfModal} title="Baixar PDF" style={{
-                marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5,
-                background: 'none', border: '1px solid var(--gray-mid, #dde2ec)',
-                borderRadius: 20, padding: '4px 12px', cursor: 'pointer',
-                fontSize: '.8rem', color: 'var(--text-muted)', fontWeight: 600,
+                marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6,
+                background: '#005BAC', border: 'none',
+                borderRadius: 20, padding: '5px 14px', cursor: 'pointer',
+                fontSize: '.8rem', color: '#fff', fontWeight: 700,
+                boxShadow: '0 1px 4px rgba(0,91,172,.25)',
               }}>
-                ⬇ PDF
+                ⬇ Baixar PDF
               </button>
             </div>
 
@@ -367,45 +368,54 @@ export function EscopoSequencia({
           }}
         >
           <div style={{
-            background: '#fff', borderRadius: 12, padding: 24, width: '100%', maxWidth: 460,
+            background: '#fff', borderRadius: 14, padding: 28, width: '100%', maxWidth: 480,
             boxShadow: '0 8px 32px rgba(0,0,0,.18)', display: 'flex', flexDirection: 'column', gap: 0,
           }}>
             {/* Título */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-main, #1a1f36)' }}>⬇ Exportar PDF</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
+              <span style={{ fontWeight: 700, fontSize: '1.05rem', color: '#1a1f36' }}>⬇ Baixar PDF</span>
               <button onClick={() => setShowPdfModal(false)} style={{
-                background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', color: '#6b7280', lineHeight: 1,
+                background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', color: '#9ca3af', lineHeight: 1,
               }}>✕</button>
             </div>
 
-            {/* Série — múltipla */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: '.78rem', fontWeight: 600, color: '#6b7280', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.04em' }}>Série</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {availSeries.map(s => (
-                  <span key={s} onClick={() => togglePdfSerie(s)} style={{
-                    cursor: 'pointer', borderRadius: 20, padding: '4px 12px', fontSize: '.82rem',
-                    fontWeight: 600, border: '1px solid',
-                    background: pdfSeries.has(s) ? '#005BAC' : 'transparent',
-                    color: pdfSeries.has(s) ? '#fff' : '#6b7280',
-                    borderColor: pdfSeries.has(s) ? '#005BAC' : '#dde2ec',
-                    userSelect: 'none', transition: 'all .15s',
-                  }}>{s}</span>
-                ))}
+            {/* Série — grid 4 colunas, mesmo tamanho */}
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: '.75rem', fontWeight: 700, color: '#9ca3af', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.06em' }}>Série</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                {availSeries.map(s => {
+                  const compSet = new Set(allEscopo.filter(r => r.serie === s).map(r => r.componente))
+                  const blocked = !!pdfComp && !compSet.has(pdfComp)
+                  const selected = pdfSeries.has(s)
+                  return (
+                    <span key={s} onClick={() => !blocked && togglePdfSerie(s)} style={{
+                      cursor: blocked ? 'not-allowed' : 'pointer',
+                      borderRadius: 8, padding: '7px 4px', fontSize: '.8rem',
+                      fontWeight: 600, border: '1px solid', textAlign: 'center',
+                      background: selected ? '#005BAC' : blocked ? '#f3f4f6' : '#fff',
+                      color: selected ? '#fff' : blocked ? '#c4c9d4' : '#374151',
+                      borderColor: selected ? '#005BAC' : blocked ? '#e5e7eb' : '#dde2ec',
+                      userSelect: 'none', transition: 'all .15s',
+                      opacity: blocked ? .55 : 1,
+                    }}>{s}</span>
+                  )
+                })}
               </div>
             </div>
 
             {/* Componente — único */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: '.78rem', fontWeight: 600, color: '#6b7280', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.04em' }}>Componente</div>
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: '.75rem', fontWeight: 700, color: '#9ca3af', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.06em' }}>Componente</div>
               <select
                 value={pdfComp}
                 onChange={e => setPdfComp(e.target.value)}
                 disabled={pdfSeries.size === 0}
                 style={{
-                  width: '100%', padding: '7px 10px', borderRadius: 8,
+                  width: '100%', padding: '8px 10px', borderRadius: 8,
                   border: '1px solid #dde2ec', fontSize: '.88rem', color: '#1a1f36',
-                  background: pdfSeries.size === 0 ? '#f3f4f6' : '#fff', cursor: pdfSeries.size === 0 ? 'not-allowed' : 'pointer',
+                  background: pdfSeries.size === 0 ? '#f3f4f6' : '#fff',
+                  cursor: pdfSeries.size === 0 ? 'not-allowed' : 'pointer',
+                  outline: 'none',
                 }}
               >
                 {pdfAvailComps.length === 0 && <option value="">—</option>}
@@ -413,39 +423,44 @@ export function EscopoSequencia({
               </select>
             </div>
 
-            {/* Bimestre — múltiplo */}
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: '.78rem', fontWeight: 600, color: '#6b7280', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.04em' }}>Bimestre</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {BIM_ORDER.map(b => (
-                  <span key={b} onClick={() => togglePdfBim(b)} style={{
-                    cursor: 'pointer', borderRadius: 20, padding: '4px 12px', fontSize: '.82rem',
-                    fontWeight: 600, border: '1px solid',
-                    background: pdfBims.has(b) ? '#f97316' : 'transparent',
-                    color: pdfBims.has(b) ? '#fff' : '#6b7280',
-                    borderColor: pdfBims.has(b) ? '#f97316' : '#dde2ec',
-                    userSelect: 'none', transition: 'all .15s',
-                  }}>{b}</span>
-                ))}
+            {/* Bimestre — grid 4 colunas, mesmo estilo da série */}
+            <div style={{ marginBottom: 26 }}>
+              <div style={{ fontSize: '.75rem', fontWeight: 700, color: '#9ca3af', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.06em' }}>Bimestre</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                {BIM_ORDER.map(b => {
+                  const selected = pdfBims.has(b)
+                  return (
+                    <span key={b} onClick={() => togglePdfBim(b)} style={{
+                      cursor: 'pointer', borderRadius: 8, padding: '7px 4px', fontSize: '.8rem',
+                      fontWeight: 600, border: '1px solid', textAlign: 'center',
+                      background: selected ? '#f97316' : '#fff',
+                      color: selected ? '#fff' : '#374151',
+                      borderColor: selected ? '#f97316' : '#dde2ec',
+                      userSelect: 'none', transition: 'all .15s',
+                    }}>{b}</span>
+                  )
+                })}
               </div>
             </div>
 
             {/* Ações */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button onClick={() => setShowPdfModal(false)} style={{
-                padding: '8px 18px', borderRadius: 8, border: '1px solid #dde2ec',
+                padding: '9px 20px', borderRadius: 8, border: '1px solid #dde2ec',
                 background: 'none', cursor: 'pointer', fontSize: '.88rem', color: '#6b7280', fontWeight: 600,
               }}>Cancelar</button>
               <button
                 onClick={generatePdf}
                 disabled={pdfSeries.size === 0 || !pdfComp || pdfBims.size === 0}
                 style={{
-                  padding: '8px 18px', borderRadius: 8, border: 'none',
-                  background: pdfSeries.size === 0 || !pdfComp || pdfBims.size === 0 ? '#9ca3af' : '#005BAC',
-                  color: '#fff', cursor: pdfSeries.size === 0 || !pdfComp || pdfBims.size === 0 ? 'not-allowed' : 'pointer',
+                  padding: '9px 20px', borderRadius: 8, border: 'none',
+                  background: pdfSeries.size === 0 || !pdfComp || pdfBims.size === 0 ? '#c4c9d4' : '#005BAC',
+                  color: '#fff',
+                  cursor: pdfSeries.size === 0 || !pdfComp || pdfBims.size === 0 ? 'not-allowed' : 'pointer',
                   fontSize: '.88rem', fontWeight: 700,
+                  boxShadow: pdfSeries.size === 0 || !pdfComp || pdfBims.size === 0 ? 'none' : '0 1px 4px rgba(0,91,172,.3)',
                 }}
-              >⬇ Gerar PDF</button>
+              >⬇ Baixar PDF</button>
             </div>
           </div>
         </div>

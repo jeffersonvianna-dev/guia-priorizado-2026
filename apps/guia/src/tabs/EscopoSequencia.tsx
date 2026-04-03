@@ -371,9 +371,8 @@ export function EscopoSequencia({
             background: '#fff', borderRadius: 14, padding: 28, width: '100%', maxWidth: 480,
             boxShadow: '0 8px 32px rgba(0,0,0,.18)', display: 'flex', flexDirection: 'column', gap: 0,
           }}>
-            {/* Título */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
-              <span style={{ fontWeight: 700, fontSize: '1.05rem', color: '#1a1f36' }}>⬇ Baixar PDF</span>
+            {/* Fechar */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
               <button onClick={() => setShowPdfModal(false)} style={{
                 background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', color: '#9ca3af', lineHeight: 1,
               }}>✕</button>

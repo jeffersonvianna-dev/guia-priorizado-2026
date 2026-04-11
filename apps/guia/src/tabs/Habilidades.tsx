@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { type EscopoRow, getHabs, fmtList, isAfSerie, BIM_ORDER } from '../types'
+import { type EscopoRow, getHabs, fmtList, isAfSerie, BIM_ORDER, sortSeries } from '../types'
 import { Filtros } from '../components/Filtros'
-import { openPrintWindow, PDF_CSS, pdfButtonStyle } from '../utils/pdf'
+import { PDF_CSS, pdfButtonStyle } from '../utils/pdf'
 
 interface Props {
   escopoAF: EscopoRow[]
@@ -29,6 +29,43 @@ export function Habilidades({
 
   const allEscopo = useMemo(() => [...escopoAF, ...escopoEM], [escopoAF, escopoEM])
   const escopoData = isAfSerie(serie) ? escopoAF : escopoEM
+
+  const [showPdfModal, setShowPdfModal] = useState(false)
+  const [pdfSeries, setPdfSeries]       = useState<Set<string>>(new Set())
+  const [pdfComp,   setPdfComp]         = useState('')
+  const [pdfBims,   setPdfBims]         = useState<Set<string>>(new Set(BIM_ORDER))
+
+  const availSeries = useMemo(() =>
+    sortSeries([...new Set(allEscopo.map(r => r.serie))]), [allEscopo])
+
+  const pdfAvailComps = useMemo(() => {
+    const s = new Set<string>()
+    allEscopo.forEach(r => s.add(r.componente))
+    return [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [allEscopo])
+
+  function openPdfModal() {
+    setPdfSeries(serie ? new Set([serie]) : new Set())
+    setPdfComp(comp || pdfAvailComps[0] || '')
+    setPdfBims(new Set(BIM_ORDER))
+    setShowPdfModal(true)
+  }
+
+  function togglePdfSerie(s: string) {
+    setPdfSeries(prev => {
+      const next = new Set(prev)
+      next.has(s) ? next.delete(s) : next.add(s)
+      return next
+    })
+  }
+
+  function togglePdfBim(b: string) {
+    setPdfBims(prev => {
+      const next = new Set(prev)
+      next.has(b) ? next.delete(b) : next.add(b)
+      return next
+    })
+  }
 
   function handleSerie(v: string) {
     const data = isAfSerie(v) ? escopoAF : escopoEM
@@ -87,38 +124,67 @@ export function Habilidades({
   }, [effectiveHab])
 
   function generatePdf() {
-    const filename = `Habilidades 2026 - ${comp} - ${serie}`
-    const bimLabel = bim || 'Todos os Bimestres'
+    if (!pdfComp || pdfSeries.size === 0 || pdfBims.size === 0) return
 
-    const habsHtml = habs.map(h => {
-      const aulasSorted = (habMap.get(h)?.aulas || [])
-      // Agrupar por bimestre
-      const byBimMap = new Map<string, EscopoRow[]>()
-      for (const a of aulasSorted) {
-        if (!byBimMap.has(a.bimestre)) byBimMap.set(a.bimestre, [])
-        byBimMap.get(a.bimestre)!.push(a)
+    const w = window.open('about:blank', '_blank')
+    if (!w) { alert('Permita pop-ups para gerar o PDF.'); return }
+    w.document.title = 'SEDUC SP'
+
+    const seriesArr = sortSeries([...pdfSeries])
+    const bimsArr   = BIM_ORDER.filter(b => pdfBims.has(b))
+    const bimLabel  = bimsArr.length === 4 ? 'Todos os Bimestres' : bimsArr.join(', ')
+    const filename  = seriesArr.length === 1
+      ? `Habilidades 2026 - ${pdfComp} - ${seriesArr[0]}`
+      : `Habilidades 2026 - ${pdfComp}`
+
+    const blocosHtml = seriesArr.map((s, idx) => {
+      const rowsSerie = allEscopo.filter(r =>
+        r.serie === s && r.componente === pdfComp && pdfBims.has(r.bimestre)
+      )
+
+      const habMapSerie = new Map<string, EscopoRow[]>()
+      for (const row of rowsSerie) {
+        for (const h of getHabs(row.habilidades)) {
+          if (!habMapSerie.has(h)) habMapSerie.set(h, [])
+          habMapSerie.get(h)!.push(row)
+        }
       }
-      const grupos = BIM_ORDER
-        .map(b => ({ b, aulas: (byBimMap.get(b) || []).sort((x, y) => +x.aula - +y.aula) }))
-        .filter(g => g.aulas.length > 0)
+      const habsSerie = [...habMapSerie.keys()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
 
-      const gruposHtml = grupos.map(({ b, aulas }) => `
-        <div class="bim-pill">${b}</div>
-        <table>
-          <thead><tr><th style="width:54px">Aula</th><th>Título</th></tr></thead>
-          <tbody>${aulas.map(a => `<tr><td>${a.aula}</td><td>${a.titulo || '—'}</td></tr>`).join('')}</tbody>
-        </table>`).join('')
+      const habsHtml = habsSerie.map(h => {
+        const aulasSorted = (habMapSerie.get(h) || [])
+        const byBimMap = new Map<string, EscopoRow[]>()
+        for (const a of aulasSorted) {
+          if (!byBimMap.has(a.bimestre)) byBimMap.set(a.bimestre, [])
+          byBimMap.get(a.bimestre)!.push(a)
+        }
+        const grupos = BIM_ORDER
+          .map(b => ({ b, aulas: (byBimMap.get(b) || []).sort((x, y) => +x.aula - +y.aula) }))
+          .filter(g => g.aulas.length > 0)
 
-      const bimPills = grupos.map(g =>
-        `<span class="bim-pill" style="margin-left:6px;font-size:10px;padding:1px 8px">${g.b}</span>`
-      ).join('')
+        const bimPills = grupos.map(g =>
+          `<span class="bim-pill" style="margin-left:6px;font-size:10px;padding:1px 8px">${g.b}</span>`
+        ).join('')
 
-      return `<div class="ae-block">
-        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:10px">
-          <span style="font-size:.9rem;font-weight:800;color:#005BAC">${h}</span>
-          ${bimPills}
-        </div>
-        ${gruposHtml}
+        const gruposHtml = grupos.map(({ b, aulas }) => `
+          <div class="bim-pill">${b}</div>
+          <table>
+            <thead><tr><th style="width:54px">Aula</th><th>Título</th></tr></thead>
+            <tbody>${aulas.map(a => `<tr><td>${a.aula}</td><td>${a.titulo || '—'}</td></tr>`).join('')}</tbody>
+          </table>`).join('')
+
+        return `<div class="ae-block">
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:10px">
+            <span style="font-size:.9rem;font-weight:800;color:#005BAC">${h}</span>
+            ${bimPills}
+          </div>
+          ${gruposHtml}
+        </div>`
+      }).join('')
+
+      return `<div class="${idx > 0 ? 'page-break' : ''}">
+        <h2 style="margin-bottom:16px">${pdfComp} — ${s}</h2>
+        ${habsHtml || '<p style="color:#9ca3af;font-size:.85rem">Nenhuma habilidade encontrada.</p>'}
       </div>`
     }).join('')
 
@@ -127,11 +193,15 @@ export function Habilidades({
       <script>window.onbeforeprint=function(){document.title=${JSON.stringify(filename)}}</script>
       </head><body>
       <h1>Habilidades 2026</h1>
-      <div class="sub">${serie} &nbsp;·&nbsp; ${comp} &nbsp;·&nbsp; ${bimLabel} &nbsp;·&nbsp; ${habs.length} habilidade(s)</div>
-      ${habsHtml}
+      <div class="sub">${pdfComp} &nbsp;·&nbsp; ${bimLabel}</div>
+      ${blocosHtml}
       </body></html>`
 
-    openPrintWindow(html, filename)
+    w.document.open()
+    w.document.write(html)
+    w.document.close()
+    setTimeout(() => { w.document.title = filename; w.print() }, 400)
+    setShowPdfModal(false)
   }
 
   function toggleCard(id: number) {
@@ -177,7 +247,7 @@ export function Habilidades({
         ) : (
           <>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-              <button onClick={generatePdf} style={pdfButtonStyle}>⬇ Baixar PDF</button>
+              <button onClick={openPdfModal} style={pdfButtonStyle}>⬇ Baixar PDF</button>
             </div>
             {/* Grid de habilidades — apenas código, sem meta */}
             <div className="hab-grid">
@@ -268,6 +338,78 @@ export function Habilidades({
           </>
         )}
       </div>
+      {/* Modal PDF */}
+      {showPdfModal && (
+        <div
+          onClick={e => e.target === e.currentTarget && setShowPdfModal(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+          }}
+        >
+          <div style={{
+            background: '#fff', borderRadius: 14, padding: 28, width: '100%', maxWidth: 480,
+            boxShadow: '0 8px 32px rgba(0,0,0,.18)', display: 'flex', flexDirection: 'column', gap: 0,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
+              <button onClick={() => setShowPdfModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', color: '#9ca3af' }}>✕</button>
+            </div>
+            {/* Série */}
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: '.75rem', fontWeight: 700, color: '#9ca3af', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.06em' }}>Série</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                {availSeries.map(s => {
+                  const compSet = new Set(allEscopo.filter(r => r.serie === s).map(r => r.componente))
+                  const blocked = !!pdfComp && !compSet.has(pdfComp)
+                  const selected = pdfSeries.has(s)
+                  return (
+                    <span key={s} onClick={() => !blocked && togglePdfSerie(s)} style={{
+                      cursor: blocked ? 'not-allowed' : 'pointer', borderRadius: 8, padding: '7px 4px',
+                      fontSize: '.8rem', fontWeight: 600, border: '1px solid', textAlign: 'center',
+                      background: selected ? '#005BAC' : blocked ? '#f3f4f6' : '#fff',
+                      color: selected ? '#fff' : blocked ? '#c4c9d4' : '#374151',
+                      borderColor: selected ? '#005BAC' : blocked ? '#e5e7eb' : '#dde2ec',
+                      userSelect: 'none', opacity: blocked ? .55 : 1,
+                    }}>{s}</span>
+                  )
+                })}
+              </div>
+            </div>
+            {/* Componente */}
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: '.75rem', fontWeight: 700, color: '#9ca3af', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.06em' }}>Componente</div>
+              <select value={pdfComp} onChange={e => setPdfComp(e.target.value)} disabled={pdfSeries.size === 0}
+                style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #dde2ec', fontSize: '.88rem', color: '#1a1f36', background: pdfSeries.size === 0 ? '#f3f4f6' : '#fff', cursor: pdfSeries.size === 0 ? 'not-allowed' : 'pointer', outline: 'none' }}>
+                {pdfAvailComps.length === 0 && <option value="">—</option>}
+                {pdfAvailComps.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            {/* Bimestre */}
+            <div style={{ marginBottom: 26 }}>
+              <div style={{ fontSize: '.75rem', fontWeight: 700, color: '#9ca3af', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.06em' }}>Bimestre</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                {BIM_ORDER.map(b => {
+                  const selected = pdfBims.has(b)
+                  return (
+                    <span key={b} onClick={() => togglePdfBim(b)} style={{
+                      cursor: 'pointer', borderRadius: 8, padding: '7px 4px', fontSize: '.8rem',
+                      fontWeight: 600, border: '1px solid', textAlign: 'center',
+                      background: selected ? '#f97316' : '#fff', color: selected ? '#fff' : '#374151',
+                      borderColor: selected ? '#f97316' : '#dde2ec', userSelect: 'none',
+                    }}>{b}</span>
+                  )
+                })}
+              </div>
+            </div>
+            {/* Ações */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button onClick={() => setShowPdfModal(false)} style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid #dde2ec', background: 'none', cursor: 'pointer', fontSize: '.88rem', color: '#6b7280', fontWeight: 600 }}>Cancelar</button>
+              <button onClick={generatePdf} disabled={pdfSeries.size === 0 || !pdfComp || pdfBims.size === 0}
+                style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: pdfSeries.size === 0 || !pdfComp || pdfBims.size === 0 ? '#c4c9d4' : '#005BAC', color: '#fff', cursor: pdfSeries.size === 0 || !pdfComp || pdfBims.size === 0 ? 'not-allowed' : 'pointer', fontSize: '.88rem', fontWeight: 700 }}>⬇ Baixar PDF</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

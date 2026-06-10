@@ -6,6 +6,7 @@ interface Props {
   escopoAF: EscopoRow[]
   escopoEM: EscopoRow[]
   mdTarefas: MdTarefaRow[]
+  habBncc?: Record<string, string>
   initialSerie?: string
   initialComp?: string
   initialBim?: string
@@ -29,7 +30,7 @@ function calcSemanas(aulas: EscopoRow[]) {
 }
 
 export function EscopoSequencia({
-  escopoAF, escopoEM, mdTarefas,
+  escopoAF, escopoEM, mdTarefas, habBncc = {},
   initialSerie = '', initialComp = '', initialBim = '',
   onGoToHab, onGoToAE, onFiltersChange, scrollToAula,
 }: Props) {
@@ -320,6 +321,7 @@ export function EscopoSequencia({
                             )}
                             {habs.slice(0, 4).map(h => (
                               <span key={h} className="c-hab-chip" style={{ fontSize: '.72rem' }}
+                                title={habBncc[h] || h}
                                 onClick={e => { e.stopPropagation(); onGoToHab(serie, comp, h) }}>
                                 {h}
                               </span>

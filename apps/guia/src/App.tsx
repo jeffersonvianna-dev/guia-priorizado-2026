@@ -117,6 +117,7 @@ export default function App() {
           escopoAF={data.escopoAF}
           escopoEM={data.escopoEM}
           mdTarefas={data.mdTarefas}
+          habBncc={data.habBncc}
           initialSerie={f.serie}
           initialComp={f.comp}
           initialBim={f.bim}
@@ -131,6 +132,7 @@ export default function App() {
         <Habilidades
           escopoAF={data.escopoAF}
           escopoEM={data.escopoEM}
+          habBncc={data.habBncc}
           initialSerie={f.serie}
           initialComp={f.comp}
           initialBim={f.bim}

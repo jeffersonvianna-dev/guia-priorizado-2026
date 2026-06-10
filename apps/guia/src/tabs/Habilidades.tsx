@@ -6,6 +6,7 @@ import { PDF_CSS, pdfButtonStyle } from '../utils/pdf'
 interface Props {
   escopoAF: EscopoRow[]
   escopoEM: EscopoRow[]
+  habBncc?: Record<string, string>
   initialSerie?: string
   initialComp?: string
   initialBim?: string
@@ -17,7 +18,7 @@ interface Props {
 
 
 export function Habilidades({
-  escopoAF, escopoEM,
+  escopoAF, escopoEM, habBncc = {},
   initialSerie = '', initialComp = '', initialBim = '', initialHab = '',
   onGoToAula, onGoToAE, onFiltersChange,
 }: Props) {
@@ -258,6 +259,7 @@ export function Habilidades({
                     key={h}
                     className={`c-hab-box${effectiveHab === h ? ' selected' : ''}`}
                     onClick={() => setSelHab(h)}
+                    title={habBncc[h] || h}
                   >
                     <span className="c-hab-code">{h}</span>
                     <span className="c-hab-box-meta">{aulaCount} aula{aulaCount !== 1 ? 's' : ''}</span>
@@ -269,6 +271,16 @@ export function Habilidades({
             {effectiveHab && (
               <div>
                 <div className="c-section-h">Aulas com {effectiveHab}</div>
+                {habBncc[effectiveHab] && (
+                  <p style={{
+                    margin: '0 0 16px', padding: '10px 14px', background: '#f8fafc',
+                    border: '1px solid #e5e7eb', borderRadius: 8, fontSize: '.85rem',
+                    color: '#475569', lineHeight: 1.5,
+                  }}>
+                    <span style={{ fontWeight: 700, color: '#334155' }}>{effectiveHab}</span>{' — '}
+                    {habBncc[effectiveHab]}
+                  </p>
+                )}
                 {aulasAgrupadas.map(({ bim: b, aulas }) => (
                   <div key={b} style={{ marginBottom: 16 }}>
                     <div style={{ marginBottom: 8 }}><span className="c-bim-chip">{b}</span></div>

@@ -62,11 +62,8 @@ export default async function handler(
         unidade_tematica:
           body.unidade_tematica == null ? null : String(body.unidade_tematica),
         habilidades: String(body.habilidades ?? ''),
-        objeto: body.objeto == null ? null : String(body.objeto),
         conteudo: body.conteudo == null ? null : String(body.conteudo),
         objetivos: body.objetivos == null ? null : String(body.objetivos),
-        descritivo: body.descritivo == null ? null : String(body.descritivo),
-        referencias: body.referencias == null ? null : String(body.referencias),
         aprendizagem_essencial:
           body.aprendizagem_essencial == null
             ? null

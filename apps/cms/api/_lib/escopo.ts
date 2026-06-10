@@ -18,11 +18,8 @@ export interface EscopoPayload {
   titulo: string;
   unidade_tematica?: string | null;
   habilidades: string;
-  objeto?: string | null;
   conteudo?: string | null;
   objetivos?: string | null;
-  descritivo?: string | null;
-  referencias?: string | null;
   aprendizagem_essencial?: string | null;
   id_md?: string | null;
 }
@@ -58,11 +55,8 @@ export function normalizeEscopoPayload(payload: EscopoPayload) {
     titulo,
     unidade_tematica: payload.unidade_tematica?.trim() || null,
     habilidades,
-    objeto: payload.objeto?.trim() || null,
     conteudo: payload.conteudo?.trim() || null,
     objetivos: payload.objetivos?.trim() || null,
-    descritivo: payload.descritivo?.trim() || null,
-    referencias: payload.referencias?.trim() || null,
     aprendizagem_essencial: payload.aprendizagem_essencial?.trim() || null,
     id_md: payload.id_md?.trim() || null,
   };
@@ -165,11 +159,8 @@ function buildEscopoRow(
     titulo: payload.titulo,
     unidade_tematica: payload.unidade_tematica,
     habilidades: payload.habilidades,
-    objeto: payload.objeto,
     conteudo: payload.conteudo,
     objetivos: payload.objetivos,
-    descritivo: payload.descritivo,
-    referencias: payload.referencias,
     aprendizagem_essencial: payload.aprendizagem_essencial,
     id_md: payload.id_md,
   };

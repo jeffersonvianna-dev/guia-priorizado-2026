@@ -13,9 +13,6 @@ export interface EscopoAFRow {
   habilidades: string   // espaço-separado
   aprendizagem_essencial: string | null
   unidade_tematica: string | null
-  objeto: string | null
-  descritivo: string | null
-  referencias: string | null
   id_md: string | null
 }
 
@@ -32,9 +29,6 @@ export interface EscopoEMRow {
   habilidades: string
   aprendizagem_essencial: string | null
   unidade_tematica: string | null
-  objeto: string | null
-  descritivo: string | null
-  referencias: string | null
   id_md: string | null
 }
 
@@ -51,9 +45,6 @@ export interface EscopoRow {
   habilidades: string
   aprendizagem_essencial: string | null
   unidade_tematica: string | null
-  objeto: string | null
-  descritivo: string | null
-  referencias: string | null
   id_md: string | null
   segmento: Segmento
 }

@@ -44,12 +44,9 @@ export interface EscopoAfRow {
   bimestre: NullableText;
   componente: NullableText;
   conteudo: NullableText;
-  descritivo: NullableText;
   habilidades: NullableText;
   id: number;
   objetivos: NullableText;
-  objeto: NullableText;
-  referencias: NullableText;
   titulo: NullableText;
   unidade_tematica: NullableText;
 }
@@ -60,12 +57,9 @@ export interface EscopoEmRow {
   bimestre: NullableText;
   componente: NullableText;
   conteudo: NullableText;
-  descritivo: NullableText;
   habilidades: NullableText;
   id: number;
   objetivos: NullableText;
-  objeto: NullableText;
-  referencias: NullableText;
   serie: NullableText;
   titulo: NullableText;
   unidade_tematica: NullableText;

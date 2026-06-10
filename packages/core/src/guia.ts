@@ -62,9 +62,6 @@ export interface EscopoAula {
   objetivos: string[];
   habilidades: string[];
   aprendizagemEssencial: string;
-  descritivo: string;
-  objeto: string;
-  referencias: string;
   unidadeTematica: string;
 }
 
@@ -340,9 +337,6 @@ export function mapEscopoRow(row: EscopoAfRow | EscopoEmRow): EscopoAula {
     objetivos: splitBulletedText(row.objetivos),
     habilidades: splitCodes(row.habilidades),
     aprendizagemEssencial: row.aprendizagem_essencial ?? '',
-    descritivo: row.descritivo ?? '',
-    objeto: row.objeto ?? '',
-    referencias: row.referencias ?? '',
     unidadeTematica: row.unidade_tematica ?? '',
   };
 }

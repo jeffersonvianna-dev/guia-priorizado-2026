@@ -44,14 +44,23 @@ export function EscopoSequencia({
 
   const allEscopo = useMemo(() => [...escopoAF, ...escopoEM], [escopoAF, escopoEM])
 
+  // md_tarefas.bimestre vem como "B1".."B4"; escopo.bimestre é "1º Bimestre"..
+  // Sem o bimestre na chave, o nº de aula (que reseta por bimestre) acende tarefa de
+  // bimestres diferentes. Normalizamos "B1" -> "1º Bimestre" e incluímos na chave.
+  const TAREFA_BIM: Record<string, string> = {
+    B1: '1º Bimestre', B2: '2º Bimestre', B3: '3º Bimestre', B4: '4º Bimestre',
+  }
   const tarefaSet = useMemo(() => {
     const s = new Set<string>()
-    mdTarefas.forEach(t => s.add(`${t.serie}|${t.componente}|${t.aula}`))
+    mdTarefas.forEach(t => {
+      const bim = TAREFA_BIM[t.bimestre] || t.bimestre
+      s.add(`${t.serie}|${t.componente}|${bim}|${t.aula}`)
+    })
     return s
   }, [mdTarefas])
 
   function hasTarefa(a: EscopoRow) {
-    return tarefaSet.has(`${a.serie}|${a.componente}|${a.aula}`)
+    return tarefaSet.has(`${a.serie}|${a.componente}|${a.bimestre}|${a.aula}`)
   }
   const escopoData = isAfSerie(serie) ? escopoAF : escopoEM
 

@@ -15,11 +15,8 @@ interface EscopoRow {
   titulo: string
   habilidades: string
   unidade_tematica: string | null
-  objeto: string | null
   conteudo: string | null
   objetivos: string | null
-  descritivo: string | null
-  referencias: string | null
   ano?: string
   serie?: string
   id_md?: string | null
@@ -27,13 +24,13 @@ interface EscopoRow {
 
 interface FormData {
   serie: string; comp: string; bim: string; aula: string; titulo: string
-  ut: string; obj: string; conteudo: string; objetivos: string; descritivo: string; referencias: string
+  ut: string; conteudo: string; objetivos: string
   id_md: string
 }
 
 const EMPTY_FORM: FormData = {
   serie: '', comp: '', bim: '', aula: '', titulo: '',
-  ut: '', obj: '', conteudo: '', objetivos: '', descritivo: '', referencias: '',
+  ut: '', conteudo: '', objetivos: '',
   id_md: '',
 }
 
@@ -83,9 +80,8 @@ export function EscopoSequencia() {
     setForm({
       serie: rowSerie, comp: row.componente, bim: row.bimestre || '',
       aula: String(row.aula), titulo: row.titulo,
-      ut: row.unidade_tematica || '', obj: row.objeto || '',
+      ut: row.unidade_tematica || '',
       conteudo: row.conteudo || '', objetivos: row.objetivos || '',
-      descritivo: row.descritivo || '', referencias: row.referencias || '',
       id_md: row.id_md || '',
     })
     setHabs(row.habilidades ? row.habilidades.split(/\s+/).filter(Boolean) : [])
@@ -130,9 +126,8 @@ export function EscopoSequencia() {
       serie: fSerie, componente: fComp,
       bimestre: bim || null, aula: parseInt(aula),
       titulo: form.titulo, unidade_tematica: form.ut || null,
-      objeto: form.obj || null, conteudo: form.conteudo || null,
-      objetivos: form.objetivos || null, descritivo: form.descritivo || null,
-      referencias: form.referencias || null,
+      conteudo: form.conteudo || null,
+      objetivos: form.objetivos || null,
       habilidades: habs.join(' '),
       id_md: form.id_md || null,
     }
@@ -283,24 +278,12 @@ export function EscopoSequencia() {
               <input className="form-input" value={form.ut} onChange={e => set('ut', e.target.value)} />
             </div>
             <div className="form-group">
-              <label className="form-label">Objeto de Conhecimento</label>
-              <input className="form-input" value={form.obj} onChange={e => set('obj', e.target.value)} />
-            </div>
-            <div className="form-group">
               <label className="form-label">Conteúdo</label>
               <textarea className="form-textarea" value={form.conteudo} onChange={e => set('conteudo', e.target.value)} />
             </div>
             <div className="form-group">
               <label className="form-label">Objetivos de Aprendizagem</label>
               <textarea className="form-textarea" value={form.objetivos} onChange={e => set('objetivos', e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Descritivo</label>
-              <textarea className="form-textarea" value={form.descritivo} onChange={e => set('descritivo', e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Referências</label>
-              <textarea className="form-textarea" value={form.referencias} onChange={e => set('referencias', e.target.value)} />
             </div>
             <div className="form-group">
               <label className="form-label">ID Material Digital</label>

@@ -81,52 +81,56 @@ export function AprendizagemEssencial({
   const aeData = isAF ? aeAF : aeEM
   const escopoData = isAF ? escopoAF : escopoEM
 
-  // AEs filtradas por série + componente
-  const aeRows = useMemo(() => {
-    if (!serie || !comp) return []
-    return aeData
-      .filter(r => r.serie === serie && r.componente === comp && (!bim || r.bimestre === bim))
-      .sort((a, b) => aeNatSort(a.ae, b.ae))
-  }, [aeData, serie, comp, bim])
-
-  // Agrupar por bimestre
-  const byBim = useMemo(() => {
-    const map = new Map<string, AeDetalhesRow[]>()
-    for (const ae of aeRows) {
-      const b = ae.bimestre || 'Sem Bimestre'
-      if (!map.has(b)) map.set(b, [])
-      map.get(b)!.push(ae)
-    }
-    return BIM_ORDER
-      .map(b => ({ bim: b, rows: map.get(b) || [] }))
-      .filter(g => g.rows.length > 0)
-  }, [aeRows])
-
-  // Aulas vinculadas a cada AE (pelo campo aprendizagem_essencial)
-  const aulasByAE = useMemo(() => {
-    const map = new Map<string, EscopoRow[]>()
-    for (const row of escopoData.filter(r => r.serie === serie && r.componente === comp)) {
-      for (const ae of getAEs(row.aprendizagem_essencial)) {
-        if (!map.has(ae)) map.set(ae, [])
-        map.get(ae)!.push(row)
-      }
+  // Catálogo: 1 detalhe por código de AE (modelo n:n -> ae_detalhes não fixa mais o bimestre).
+  const aeCatalog = useMemo(() => {
+    const map = new Map<string, AeDetalhesRow>()
+    for (const r of aeData) {
+      if (r.serie === serie && r.componente === comp && !map.has(r.ae)) map.set(r.ae, r)
     }
     return map
+  }, [aeData, serie, comp])
+
+  // Vínculo n:n vindo do ESCOPO: em quais (bimestre, AE) a AE aparece, e suas aulas no bimestre.
+  const { aeByBim, aulasByBimAE } = useMemo(() => {
+    const aulas = new Map<string, EscopoRow[]>()   // `${bim}|${ae}` -> aulas daquele bimestre
+    const byb = new Map<string, Set<string>>()     // bim -> {ae}
+    for (const row of escopoData.filter(r => r.serie === serie && r.componente === comp)) {
+      for (const ae of getAEs(row.aprendizagem_essencial)) {
+        const k = `${row.bimestre}|${ae}`
+        if (!aulas.has(k)) aulas.set(k, [])
+        aulas.get(k)!.push(row)
+        if (!byb.has(row.bimestre)) byb.set(row.bimestre, new Set())
+        byb.get(row.bimestre)!.add(ae)
+      }
+    }
+    return { aeByBim: byb, aulasByBimAE: aulas }
   }, [escopoData, serie, comp])
 
-  // Abrir e scrollar para AE solicitada externamente
+  // Lista por bimestre (catálogo + n:n do escopo), respeitando o filtro de bimestre.
+  const byBim = useMemo(() => {
+    if (!serie || !comp) return []
+    return BIM_ORDER
+      .filter(b => !bim || b === bim)
+      .map(b => {
+        const codes = [...(aeByBim.get(b) || [])].sort(aeNatSort)
+        const rows = codes.map(code =>
+          aeCatalog.get(code) || ({ serie, componente: comp, ae: code, bimestre: b, titulo: code } as AeDetalhesRow))
+        return { bim: b, rows }
+      })
+      .filter(g => g.rows.length > 0)
+  }, [aeByBim, aeCatalog, serie, comp, bim])
+
+  // Abrir e scrollar para AE solicitada externamente (1º bimestre em que aparece)
   useEffect(() => {
     if (!initialAE || initialAE === targetAERef.current) return
     targetAERef.current = initialAE
-    // Encontrar a key do card correspondente
-    const row = aeRows.find(r => r.ae === initialAE)
-    if (!row) return
-    const key = `${row.serie}-${row.componente}-${row.ae}`
-    setOpenAEs(prev => new Set([...prev, key]))
+    const grp = byBim.find(g => g.rows.some(r => r.ae === initialAE))
+    if (!grp) return
+    setOpenAEs(prev => new Set([...prev, `${grp.bim}-${initialAE}`]))
     setTimeout(() => {
       document.getElementById(`ae-card-${initialAE}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }, 80)
-  }, [initialAE, aeRows])
+  }, [initialAE, byBim])
 
   function generatePdf() {
     if (!pdfComp || pdfSeries.size === 0 || pdfBims.size === 0) return
@@ -143,29 +147,31 @@ export function AprendizagemEssencial({
       : `AE 2026 - ${pdfComp}`
 
     const blocosHtml = seriesArr.map((s, idx) => {
-      const aeRows = allAe
-        .filter(r => r.serie === s && r.componente === pdfComp && pdfBims.has(r.bimestre || ''))
-        .sort((a, b) => aeNatSort(a.ae, b.ae))
-
-      // aulas por AE para esta série
+      // catálogo (1 detalhe por código) + n:n do escopo (bim -> AEs; aulas por bim+AE)
+      const catalog = new Map<string, AeDetalhesRow>()
+      for (const r of allAe) {
+        if (r.serie === s && r.componente === pdfComp && !catalog.has(r.ae)) catalog.set(r.ae, r)
+      }
       const escopoSerie = allEscopo.filter(r => r.serie === s && r.componente === pdfComp)
-      const aulaMap = new Map<string, EscopoRow[]>()
+      const aulaByBimAE = new Map<string, EscopoRow[]>()
+      const aeByBim = new Map<string, Set<string>>()
       for (const row of escopoSerie) {
+        if (!pdfBims.has(row.bimestre)) continue
         for (const ae of getAEs(row.aprendizagem_essencial)) {
-          if (!aulaMap.has(ae)) aulaMap.set(ae, [])
-          aulaMap.get(ae)!.push(row)
+          const k = `${row.bimestre}|${ae}`
+          if (!aulaByBimAE.has(k)) aulaByBimAE.set(k, [])
+          aulaByBimAE.get(k)!.push(row)
+          if (!aeByBim.has(row.bimestre)) aeByBim.set(row.bimestre, new Set())
+          aeByBim.get(row.bimestre)!.add(ae)
         }
       }
-
-      // agrupar por bimestre
-      const byBimMap = new Map<string, AeDetalhesRow[]>()
-      for (const ae of aeRows) {
-        const b = ae.bimestre || 'Sem Bimestre'
-        if (!byBimMap.has(b)) byBimMap.set(b, [])
-        byBimMap.get(b)!.push(ae)
-      }
       const grupos = BIM_ORDER
-        .map(b => ({ b, rows: byBimMap.get(b) || [] }))
+        .filter(b => pdfBims.has(b))
+        .map(b => ({
+          b,
+          rows: [...(aeByBim.get(b) || [])].sort((x, y) => aeNatSort(x, y))
+            .map(code => catalog.get(code) || ({ serie: s, componente: pdfComp, ae: code, bimestre: b, titulo: code } as AeDetalhesRow)),
+        }))
         .filter(g => g.rows.length > 0)
 
       const gruposHtml = grupos.map(({ b, rows }) => {
@@ -173,7 +179,7 @@ export function AprendizagemEssencial({
           const hpChips = ae.hab_priorizada ? getHabs(ae.hab_priorizada) : []
           const hrChips = ae.hab_relacionadas ? getHabs(ae.hab_relacionadas) : []
           const cpChips = ae.conhecimentos_previos ? getHabs(ae.conhecimentos_previos) : []
-          const aulas   = (aulaMap.get(ae.ae) || []).slice().sort((a, b) => +a.aula - +b.aula)
+          const aulas   = (aulaByBimAE.get(`${b}|${ae.ae}`) || []).slice().sort((x, y) => +x.aula - +y.aula)
 
           const row1 = (hpChips.length > 0 || hrChips.length > 0) ? `
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;margin-bottom:8px">
@@ -249,7 +255,7 @@ export function AprendizagemEssencial({
     ? { icon: '📚', title: 'Selecione uma série', sub: 'Use o filtro acima para carregar as Aprendizagens Essenciais.' }
     : !comp
     ? { icon: '📚', title: 'Selecione o componente', sub: '' }
-    : aeRows.length === 0
+    : byBim.length === 0
     ? { icon: '💭', title: 'Nenhuma AE encontrada', sub: `Não há AEs para ${serie} — ${comp}.` }
     : null
 
@@ -279,12 +285,12 @@ export function AprendizagemEssencial({
             <div key={bim} style={{ marginBottom: 28 }}>
               <div className="c-section-h">{bim}</div>
               {rows.map(ae => {
-                const key = `${ae.serie}-${ae.componente}-${ae.ae}`
+                const key = `${bim}-${ae.ae}`
                 const open = openAEs.has(key)
                 const hpChips = ae.hab_priorizada ? getHabs(ae.hab_priorizada).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })) : []
                 const hrChips = ae.hab_relacionadas ? getHabs(ae.hab_relacionadas).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })) : []
                 const cpChips = ae.conhecimentos_previos ? getHabs(ae.conhecimentos_previos).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })) : []
-                const aulas   = (aulasByAE.get(ae.ae) || []).slice().sort((a, b) => a.aula - b.aula)
+                const aulas   = (aulasByBimAE.get(`${bim}|${ae.ae}`) || []).slice().sort((a, b) => a.aula - b.aula)
                 return (
                   <div key={key} id={`ae-card-${ae.ae}`} className={`ae-list-item${open ? ' open' : ''}`}>
                     <div className="ae-list-header" onClick={() => toggleAE(key)}>

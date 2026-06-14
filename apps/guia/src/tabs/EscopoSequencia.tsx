@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { type EscopoRow, type MdTarefaRow, getHabs, fmtList, isAfSerie, BIM_ORDER, sortSeries } from '../types'
+import { type EscopoRow, type MdTarefaRow, getHabs, getAEs, fmtList, isAfSerie, BIM_ORDER, sortSeries } from '../types'
 import { Filtros } from '../components/Filtros'
 
 interface Props {
@@ -17,13 +17,6 @@ interface Props {
 }
 
 const SEMANAS = 7
-
-// Uma aula pode ter mais de uma AE (escopo guarda "AE15 - ... || AE16 - ...").
-// Extrai todos os códigos AE, sem repetir, ordenados pelo número.
-function getAEs(ae?: string | null): string[] {
-  const codes = (ae || '').match(/AE\d+/g) || []
-  return [...new Set(codes)].sort((a, b) => parseInt(a.slice(2)) - parseInt(b.slice(2)))
-}
 
 function calcSemanas(aulas: EscopoRow[]) {
   const sorted = [...aulas].sort((a, b) => a.aula - b.aula)

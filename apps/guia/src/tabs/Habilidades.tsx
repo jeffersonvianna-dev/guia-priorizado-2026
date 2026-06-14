@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { type EscopoRow, getHabs, fmtList, isAfSerie, BIM_ORDER, sortSeries } from '../types'
+import { type EscopoRow, getHabs, getAEs, fmtList, isAfSerie, BIM_ORDER, sortSeries } from '../types'
 import { Filtros } from '../components/Filtros'
 import { PDF_CSS, pdfButtonStyle } from '../utils/pdf'
 
@@ -286,7 +286,7 @@ export function Habilidades({
                     <div style={{ marginBottom: 8 }}><span className="c-bim-chip">{b}</span></div>
                     {aulas.map(aula => {
                       const open = openCards.has(aula.aula)
-                      const aeCode = (aula.aprendizagem_essencial || '').match(/^AE\d+/)?.[0] || ''
+                      const aeCodes = getAEs(aula.aprendizagem_essencial)
                       const conteudoItems = fmtList(aula.conteudo)
                       const objItems = fmtList(aula.objetivos)
                       return (
@@ -301,15 +301,16 @@ export function Habilidades({
                               Aula {aula.aula}
                             </div>
                             <div className="c-aula-titulo">{aula.titulo}</div>
-                            {aeCode && (
+                            {aeCodes.map(code => (
                               <span
+                                key={code}
                                 className="c-ae-badge nav"
                                 style={{ fontSize: '.72rem', padding: '2px 8px', flexShrink: 0 }}
-                                onClick={e => { e.stopPropagation(); onGoToAE(serie, comp, aeCode) }}
+                                onClick={e => { e.stopPropagation(); onGoToAE(serie, comp, code) }}
                               >
-                                {aeCode}
+                                {code}
                               </span>
-                            )}
+                            ))}
                             <span className="c-expand-icon">▾</span>
                           </div>
                           {open && (

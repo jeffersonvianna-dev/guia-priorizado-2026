@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { type AeDetalhesRow, type EscopoRow, BIM_ORDER, aeNatSort, getHabs, isAfSerie, sortSeries } from '../types'
+import { type AeDetalhesRow, type EscopoRow, BIM_ORDER, aeNatSort, getHabs, getAEs, isAfSerie, sortSeries } from '../types'
 import { Filtros } from '../components/Filtros'
 import { PDF_CSS, pdfButtonStyle } from '../utils/pdf'
 
@@ -106,9 +106,7 @@ export function AprendizagemEssencial({
   const aulasByAE = useMemo(() => {
     const map = new Map<string, EscopoRow[]>()
     for (const row of escopoData.filter(r => r.serie === serie && r.componente === comp)) {
-      const aeCode = (row.aprendizagem_essencial || '').match(/^AE\d+/)?.[0]
-      const aeCodes = aeCode ? [aeCode] : []
-      for (const ae of aeCodes) {
+      for (const ae of getAEs(row.aprendizagem_essencial)) {
         if (!map.has(ae)) map.set(ae, [])
         map.get(ae)!.push(row)
       }
@@ -153,10 +151,9 @@ export function AprendizagemEssencial({
       const escopoSerie = allEscopo.filter(r => r.serie === s && r.componente === pdfComp)
       const aulaMap = new Map<string, EscopoRow[]>()
       for (const row of escopoSerie) {
-        const aeCode = (row.aprendizagem_essencial || '').match(/^AE\d+/)?.[0]
-        if (aeCode) {
-          if (!aulaMap.has(aeCode)) aulaMap.set(aeCode, [])
-          aulaMap.get(aeCode)!.push(row)
+        for (const ae of getAEs(row.aprendizagem_essencial)) {
+          if (!aulaMap.has(ae)) aulaMap.set(ae, [])
+          aulaMap.get(ae)!.push(row)
         }
       }
 

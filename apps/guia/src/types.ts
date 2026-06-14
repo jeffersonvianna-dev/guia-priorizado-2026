@@ -93,6 +93,13 @@ export function getHabs(habilidades: string | null | undefined): string[] {
   return (habilidades || '').split(/\s+/).filter(Boolean)
 }
 
+// Uma aula pode ter mais de uma AE (escopo guarda "AE15 - ... || AE16 - ...").
+// Extrai todos os códigos AE, sem repetir, ordenados pelo número.
+export function getAEs(ae: string | null | undefined): string[] {
+  const codes = (ae || '').match(/AE\d+/g) || []
+  return [...new Set(codes)].sort((a, b) => parseInt(a.slice(2)) - parseInt(b.slice(2)))
+}
+
 export function sortSeries(arr: string[]): string[] {
   return [...new Set(arr)].sort((a, b) => {
     const ia = SERIE_ORDER.findIndex(s => s === a)

@@ -18,6 +18,13 @@ interface Props {
 
 const SEMANAS = 7
 
+// Uma aula pode ter mais de uma AE (escopo guarda "AE15 - ... || AE16 - ...").
+// Extrai todos os códigos AE, sem repetir, ordenados pelo número.
+function getAEs(ae?: string | null): string[] {
+  const codes = (ae || '').match(/AE\d+/g) || []
+  return [...new Set(codes)].sort((a, b) => parseInt(a.slice(2)) - parseInt(b.slice(2)))
+}
+
 function calcSemanas(aulas: EscopoRow[]) {
   const sorted = [...aulas].sort((a, b) => a.aula - b.aula)
   const per = Math.ceil(sorted.length / SEMANAS)
@@ -88,7 +95,7 @@ export function EscopoSequencia({
   const stats = useMemo(() => {
     const totalAulas = aulas.length
     const totalAEs = new Set(
-      aulas.map(r => (r.aprendizagem_essencial || '').match(/^AE\d+/)?.[0]).filter(Boolean)
+      aulas.flatMap(r => getAEs(r.aprendizagem_essencial))
     ).size
     const totalHabs = new Set(
       aulas.flatMap(r => getHabs(r.habilidades))
@@ -163,14 +170,14 @@ export function EscopoSequencia({
         })
 
       const rowsHtml = rowsSerie.map(a => {
-        const aeCode = (a.aprendizagem_essencial || '').match(/^AE\d+/)?.[0] || ''
+        const aeCodes = getAEs(a.aprendizagem_essencial)
         const habs = getHabs(a.habilidades)
         const tarefa = hasTarefa(a)
         return `<tr>
           <td>${a.bimestre}</td>
           <td>${a.aula}</td>
           <td>${a.titulo || '—'}${tarefa ? ' <span class="tag-tarefa">📋 Tarefa</span>' : ''}</td>
-          <td>${aeCode || '—'}</td>
+          <td>${aeCodes.join(', ') || '—'}</td>
           <td class="habs">${habs.join(' · ')}</td>
         </tr>`
       }).join('')
@@ -297,7 +304,7 @@ export function EscopoSequencia({
                   {semAulas.map(aula => {
                     const open = openCards.has(aula.aula)
                     const habs = getHabs(aula.habilidades)
-                    const aeCode = (aula.aprendizagem_essencial || '').match(/^AE\d+/)?.[0] || ''
+                    const aeCodes = getAEs(aula.aprendizagem_essencial)
                     const conteudoItems = fmtList(aula.conteudo)
                     const objItems     = fmtList(aula.objetivos)
                     return (
@@ -313,12 +320,12 @@ export function EscopoSequencia({
                             }}>📋 Tarefa</span>
                           )}
                           <div className="flex-chips c-aula-habs-preview">
-                            {aeCode && (
-                              <span className="c-ae-badge nav" style={{ fontSize: '.72rem', padding: '2px 8px' }}
-                                onClick={e => { e.stopPropagation(); onGoToAE(serie, comp, aeCode) }}>
-                                {aeCode}
+                            {aeCodes.map(code => (
+                              <span key={code} className="c-ae-badge nav" style={{ fontSize: '.72rem', padding: '2px 8px' }}
+                                onClick={e => { e.stopPropagation(); onGoToAE(serie, comp, code) }}>
+                                {code}
                               </span>
-                            )}
+                            ))}
                             {habs.slice(0, 4).map(h => (
                               <span key={h} className="c-hab-chip" style={{ fontSize: '.72rem' }}
                                 title={habBncc[h] || h}

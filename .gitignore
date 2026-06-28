@@ -11,3 +11,9 @@ dist/
 !.vscode/extensions.json
 
 .vercel
+
+# seguranca/higiene (auditoria 2026-06-28)
+.env*
+!.env.example
+*.vercel.tmp
+supabase/.temp/

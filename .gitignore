@@ -17,3 +17,4 @@ dist/
 !.env.example
 *.vercel.tmp
 supabase/.temp/
+.mcp.json
